@@ -140,6 +140,14 @@ export default function HomePage() {
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading ? 'Logging in...' : 'Login'}
                     </Button>
+                    <div className="pt-1 text-center">
+                      <a
+                        href="/forgot-password"
+                        className="inline-flex rounded-full border border-slate-900/35 bg-[color:var(--color-primary)]/8 px-3 py-1.5 text-sm font-semibold text-[color:var(--color-primary)] transition hover:bg-[color:var(--color-primary)]/12 hover:border-slate-900/55"
+                      >
+                        Forgot Password?
+                      </a>
+                    </div>
                   </form>
                 ) : (
                   <form onSubmit={register} className="space-y-4">

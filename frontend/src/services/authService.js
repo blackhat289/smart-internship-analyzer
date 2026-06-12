@@ -16,6 +16,14 @@ export const authService = {
     localStorage.setItem(userKey, JSON.stringify(data?.user || null));
     return data;
   },
+  forgotPassword: async (email) => {
+    const { data } = await api.post('/auth/forgot-password', { email });
+    return data;
+  },
+  resetPassword: async (token, password, confirmPassword) => {
+    const { data } = await api.post('/auth/reset-password', { token, password, confirmPassword });
+    return data;
+  },
   logout: () => {
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(userKey);
