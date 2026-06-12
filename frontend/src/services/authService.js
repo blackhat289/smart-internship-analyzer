@@ -12,6 +12,8 @@ export const authService = {
   },
   register: async (payload) => {
     const { data } = await api.post('/auth/register', payload);
+    localStorage.setItem(tokenKey, data?.token || '');
+    localStorage.setItem(userKey, JSON.stringify(data?.user || null));
     return data;
   },
   logout: () => {

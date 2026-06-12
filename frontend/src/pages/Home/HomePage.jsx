@@ -25,6 +25,11 @@ function Field({ label, ...props }) {
   );
 }
 
+function getErrorMessage(error, fallback) {
+  if (typeof error === 'string') return error;
+  return error?.message || fallback;
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('login');
@@ -42,7 +47,7 @@ export default function HomePage() {
       toast.success('Logged in successfully.');
       navigate('/resume-analysis');
     } catch (error) {
-      toast.error(error?.message || 'Login failed.');
+      toast.error(getErrorMessage(error, 'Login failed.'));
     } finally {
       setLoading(false);
     }
@@ -66,10 +71,10 @@ export default function HomePage() {
         email: form.get('email'),
         password,
       });
-      toast.success('Account created. Please log in.');
-      setTab('login');
+      toast.success('Account created successfully.');
+      navigate('/resume-analysis');
     } catch (error) {
-      toast.error(error?.message || 'Registration failed.');
+      toast.error(getErrorMessage(error, 'Registration failed.'));
     } finally {
       setLoading(false);
     }
