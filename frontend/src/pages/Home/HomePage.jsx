@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight, BadgeCheck, FileUp, Sparkles, Search, Lightbulb, ChartNoAxesCombined, Download } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import { authService } from '../../services/authService';
 
 const steps = [
-  'Create Account',
-  'Upload Resume',
-  'AI Analysis',
-  'Gap Detection',
-  'Recommendations',
-  'Readiness Score',
-  'Download Report',
+  { title: 'Create Account', icon: BadgeCheck, description: 'Sign up and create your account.' },
+  { title: 'Upload Resume', icon: FileUp, description: 'Upload your resume in PDF format.' },
+  { title: 'AI Analysis', icon: Sparkles, description: 'Our AI analyzes your skills and experience.' },
+  { title: 'Gap Detection', icon: Search, description: 'We identify skill gaps for your target role.' },
+  { title: 'Recommendations', icon: Lightbulb, description: 'Get personalized learning and improvement tips.' },
+  { title: 'Readiness Score', icon: ChartNoAxesCombined, description: 'View your internship readiness score.' },
+  { title: 'Download Report', icon: Download, description: 'Download your complete readiness report.' },
 ];
 
 function Field({ label, ...props }) {
@@ -27,6 +29,7 @@ function Field({ label, ...props }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
 
@@ -166,8 +169,15 @@ export default function HomePage() {
         </section>
 
         <section className="mx-auto mt-8 w-full max-w-5xl">
-          <div className="rounded-[2rem] border border-[#17395f] bg-[#0F2D52] px-5 py-6 text-white shadow-[0_30px_80px_-45px_rgba(15,45,82,0.8)] sm:px-8 sm:py-8">
-            <div className="max-w-2xl">
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+            whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,31,58,0.94),rgba(8,23,44,0.98))] px-5 py-6 text-white shadow-[0_30px_80px_-45px_rgba(15,45,82,0.8)] sm:px-8 sm:py-8"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(68,120,255,0.22),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(212,160,23,0.12),transparent_32%)]" />
+            <div className="relative max-w-2xl">
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[color:var(--color-accent)]">
                 Your Journey to Internship Readiness
               </p>
@@ -179,20 +189,86 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((step, index) => (
-                <div
-                  key={step}
-                  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-sm font-bold text-[#0F2D52]">
-                    {index + 1}
-                  </div>
-                  <div className="pt-1 text-sm font-medium leading-6 text-white/90">{step}</div>
-                </div>
-              ))}
+            <div className="relative mt-8">
+              <div className="absolute left-6 right-6 top-7 hidden h-px overflow-hidden md:block">
+                <motion.div
+                  initial={reduceMotion ? false : { scaleX: 0 }}
+                  whileInView={reduceMotion ? undefined : { scaleX: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 1.2, ease: 'easeInOut' }}
+                  className="h-px origin-left bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent"
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-7 md:items-stretch md:gap-3">
+                {steps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isFirst = index === 0;
+
+                  return (
+                    <motion.div
+                      key={step.title}
+                      initial={reduceMotion ? false : { opacity: 0, y: 26 }}
+                      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={{ duration: 0.55, delay: index * 0.08, ease: 'easeOut' }}
+                      whileHover={reduceMotion ? undefined : { scale: 1.03, y: -4 }}
+                      className="relative h-full"
+                    >
+                      <div className="absolute left-6 top-7 hidden h-1.5 w-full bg-gradient-to-r from-cyan-300/70 via-fuchsia-400/40 to-transparent md:block" />
+                      <div className="absolute left-6 top-7 hidden h-1.5 w-1/2 bg-gradient-to-r from-[color:var(--color-accent)] to-transparent opacity-70 md:block" />
+
+                      <div className="relative flex h-full min-h-[260px] flex-col rounded-3xl border border-white/10 bg-white/5 p-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+                        <div className="mb-4 flex items-center gap-3">
+                          <div className="relative">
+                            <motion.div
+                              animate={reduceMotion ? undefined : { opacity: [0.75, 1, 0.75], scale: [1, 1.08, 1] }}
+                              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                              className={`absolute inset-0 rounded-full blur-md ${
+                                isFirst ? 'bg-[color:var(--color-accent)]/40' : 'bg-cyan-400/25'
+                              }`}
+                            />
+                            <div
+                              className={`relative flex h-11 w-11 items-center justify-center rounded-full border text-sm font-black shadow-[0_0_24px_rgba(255,255,255,0.08)] ${
+                                isFirst
+                                  ? 'border-[color:var(--color-accent)]/60 bg-[color:var(--color-accent)] text-[#091a33]'
+                                  : 'border-white/15 bg-[#0d2140] text-white'
+                              }`}
+                            >
+                              {index + 1}
+                            </div>
+                          </div>
+
+                          {isFirst ? (
+                            <span className="rounded-full border border-[color:var(--color-accent)]/35 bg-[color:var(--color-accent)]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
+                              Start Here
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                              Step {index + 1}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mb-3 flex items-center gap-2 text-white/85">
+                          <Icon className={isFirst ? 'h-4 w-4 text-[color:var(--color-accent)]' : 'h-4 w-4 text-cyan-300'} />
+                          <h3 className="text-sm font-bold">{step.title}</h3>
+                        </div>
+
+                        <p className="text-sm leading-6 text-white/70">{step.description}</p>
+
+                        {!isFirst ? (
+                          <div className="mt-4 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-cyan-200/80">
+                            <ArrowRight className="h-3.5 w-3.5" />
+                            Continue
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </motion.div>
         </section>
       </main>
     </div>
