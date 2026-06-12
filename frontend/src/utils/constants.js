@@ -1,4 +1,4 @@
-export const APP_NAME = 'Smart Internship Analyzer';
+export const APP_NAME = 'SkillSprint';
 
 export const NAV_ITEMS = [
   { label: 'Home', path: '/' },
