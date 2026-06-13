@@ -7,6 +7,7 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import { authService } from '../../services/authService';
+import useAuth from '../../hooks/useAuth';
 
 const steps = [
   { title: 'Create Account', icon: BadgeCheck, description: 'Sign up and create your account.' },
@@ -34,6 +35,7 @@ function getErrorMessage(error, fallback) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { login: setAuthState } = useAuth();
   const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState('login');
   const [loading, setLoading] = useState(false);
@@ -43,10 +45,11 @@ export default function HomePage() {
     const form = new FormData(event.currentTarget);
     try {
       setLoading(true);
-      await authService.login({
+      const authData = await authService.login({
         email: form.get('email'),
         password: form.get('password'),
       });
+      setAuthState(authData);
       toast.success('Logged in successfully.');
       navigate('/resume-analysis');
     } catch (error) {
@@ -69,11 +72,12 @@ export default function HomePage() {
 
     try {
       setLoading(true);
-      await authService.register({
+      const authData = await authService.register({
         name: form.get('name'),
         email: form.get('email'),
         password,
       });
+      setAuthState(authData);
       toast.success('Account created successfully.');
       navigate('/resume-analysis');
     } catch (error) {

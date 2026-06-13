@@ -1,13 +1,16 @@
 import { Router } from 'express';
-import { uploadMiddleware } from '../middlewares/upload.middleware.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
-import { uploadResume, parseResume, extractResumeData, analyzeResume } from '../controllers/resume.controller.js';
-import { validationMiddleware } from '../middlewares/validation.middleware.js';
-import { analyzeResumeSchema } from '../validators/resume.validator.js';
+import { upload, resumeUploadErrorHandler } from '../middlewares/upload.middleware.js';
+import { uploadResume } from '../controllers/resume.controller.js';
 
 const router = Router();
-router.post('/upload', authMiddleware, uploadMiddleware.single('resume'), uploadResume);
-router.get('/parse', authMiddleware, parseResume);
-router.get('/extract', authMiddleware, extractResumeData);
-router.post('/analyze', authMiddleware, validationMiddleware(analyzeResumeSchema), analyzeResume);
+
+router.post(
+  '/upload',
+  authMiddleware,
+  upload.single('resume'),
+  resumeUploadErrorHandler,
+  uploadResume
+);
+
 export default router;

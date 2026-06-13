@@ -1,17 +1,21 @@
-import { resumeRepository } from '../../repositories/resume.repository.js';
-import { parseResumeService } from './parseResume.service.js';
-import { extractResumeDataService } from './extractResumeData.service.js';
+import fs from 'fs/promises';
+import { ApiError } from '../../utils/ApiError.js';
 
-export async function uploadResumeService({ userId, file }) {
-  const parsedText = await parseResumeService(file.path);
-  const extractedData = await extractResumeDataService(parsedText);
-  return resumeRepository.create({
-    userId,
-    originalName: file.originalname,
-    filePath: file.path,
+export async function uploadResumeService(file) {
+  if (!file) {
+    throw new ApiError(400, 'Resume file is required');
+  }
+
+  try {
+    await fs.access(file.path);
+  } catch (_error) {
+    throw new ApiError(500, 'Uploaded file could not be found on disk');
+  }
+
+  return {
+    originalFileName: file.originalname,
+    storedFilePath: file.path,
     mimeType: file.mimetype,
-    parsedText,
-    extractedData,
-    status: 'parsed',
-  });
+    size: file.size,
+  };
 }
