@@ -1,39 +1,100 @@
+import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import Analysis from '../models/Analysis.js';
 import { readinessScoreService } from '../services/analysis/readinessScore.service.js';
 import { skillGapService } from '../services/analysis/skillGap.service.js';
 import { strengthsAnalysisService } from '../services/analysis/strengthsAnalysis.service.js';
-import { resumeRepository } from '../repositories/resume.repository.js';
 
-export async function calculateReadinessScore(req, res, next) {
+function validateAnalysisPayload(body) {
+  const { userId, selectedRole, skills, projects } = body || {};
+
+  if (!userId || !selectedRole) {
+    throw new ApiError(400, 'userId and selectedRole are required');
+  }
+
+  if (skills !== undefined && !Array.isArray(skills)) {
+    throw new ApiError(400, 'skills must be an array');
+  }
+
+  if (projects !== undefined && !Array.isArray(projects)) {
+    throw new ApiError(400, 'projects must be an array');
+  }
+}
+
+export async function generateAnalysis(req, res, next) {
   try {
-    const resume = await resumeRepository.findByUserId(req.user.sub);
-    const score = await readinessScoreService({
-      skills: resume?.extractedData?.skills || [],
-      gaps: [],
-      strengths: [],
+    validateAnalysisPayload(req.body);
+
+    const { userId, selectedRole, skills = [], projects = [] } = req.body;
+
+    const [readinessScoreResult, strengthsResult, skillGapResult] = await Promise.all([
+      readinessScoreService({ selectedRole, skills, projects }),
+      strengthsAnalysisService({ selectedRole, skills, projects }),
+      skillGapService({ selectedRole, skills, projects }),
+    ]);
+
+    const analysis = await Analysis.create({
+      userId,
+      selectedRole,
+      readinessScore: readinessScoreResult.score,
+      strengths: strengthsResult.strengths,
+      skillGaps: skillGapResult.skillGaps,
     });
-    res.json(new ApiResponse(200, 'Readiness score calculated successfully', { readinessScore: score }));
+
+    return res.status(201).json(
+      new ApiResponse(201, 'Analysis generated successfully', {
+        analysisId: analysis._id,
+        selectedRole: analysis.selectedRole,
+        readinessScore: analysis.readinessScore,
+        strengths: analysis.strengths,
+        skillGaps: analysis.skillGaps,
+      })
+    );
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 
-export async function analyzeSkillGap(req, res, next) {
+export async function getAnalysisByUserId(req, res, next) {
   try {
-    const resume = await resumeRepository.findByUserId(req.user.sub);
-    const gaps = await skillGapService(req.body.targetRole, resume?.extractedData || {});
-    res.json(new ApiResponse(200, 'Skill gap analysis completed', { gaps }));
+    const { userId } = req.params;
+
+    if (!userId) {
+      throw new ApiError(400, 'userId is required');
+    }
+
+    const analysis = await Analysis.findOne({ userId }).sort({ createdAt: -1 });
+
+    if (!analysis) {
+      throw new ApiError(404, 'Analysis not found for this user');
+    }
+
+    return res.json(
+      new ApiResponse(200, 'Analysis fetched successfully', {
+        analysis,
+      })
+    );
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }
 
-export async function analyzeStrengths(req, res, next) {
+export async function getAnalysisReportById(req, res, next) {
   try {
-    const resume = await resumeRepository.findByUserId(req.user.sub);
-    const strengths = await strengthsAnalysisService(resume?.extractedData || {});
-    res.json(new ApiResponse(200, 'Strength analysis completed', { strengths }));
+    const { analysisId } = req.params;
+
+    const analysis = await Analysis.findById(analysisId);
+
+    if (!analysis) {
+      throw new ApiError(404, 'Analysis report not found');
+    }
+
+    return res.json(
+      new ApiResponse(200, 'Analysis report fetched successfully', {
+        analysis,
+      })
+    );
   } catch (error) {
-    next(error);
+    return next(error);
   }
 }

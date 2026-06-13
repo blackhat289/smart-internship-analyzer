@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
-import { calculateReadinessScore, analyzeSkillGap, analyzeStrengths } from '../controllers/analysis.controller.js';
-import { validationMiddleware } from '../middlewares/validation.middleware.js';
-import { analyzeResumeSchema } from '../validators/resume.validator.js';
+import {
+  generateAnalysis,
+  getAnalysisByUserId,
+  getAnalysisReportById,
+} from '../controllers/analysis.controller.js';
 
 const router = Router();
-router.get('/readiness-score', authMiddleware, calculateReadinessScore);
-router.post('/skill-gap', authMiddleware, validationMiddleware(analyzeResumeSchema), analyzeSkillGap);
-router.get('/strengths', authMiddleware, analyzeStrengths);
+
+router.post('/generate', authMiddleware, generateAnalysis);
+router.get('/:userId', authMiddleware, getAnalysisByUserId);
+router.get('/report/:analysisId', authMiddleware, getAnalysisReportById);
+
 export default router;

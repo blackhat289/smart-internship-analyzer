@@ -2,14 +2,22 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('sia_token');
+  config.headers = config.headers || {};
+
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
+  if (isFormData) {
+    delete config.headers['Content-Type'];
+    delete config.headers['content-type'];
+  } else if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
   return config;
 });
 

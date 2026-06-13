@@ -15,9 +15,17 @@ export async function connectDB() {
     }
   }
 
-  await mongoose.connect(env.mongoUri, {
-    serverSelectionTimeoutMS: 5000,
-  });
+  try {
+    await mongoose.connect(env.mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+    });
 
-  console.log('MongoDB connected successfully');
+    console.log('MongoDB connected successfully');
+    return true;
+  } catch (error) {
+    console.warn(`MongoDB connection failed, continuing without database: ${error.message}`);
+    return false;
+  }
 }

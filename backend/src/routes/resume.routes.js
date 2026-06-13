@@ -8,7 +8,10 @@ const router = Router();
 router.post(
   '/upload',
   authMiddleware,
-  upload.single('resume'),
+  upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+  ]),
   resumeUploadErrorHandler,
   uploadResume
 );

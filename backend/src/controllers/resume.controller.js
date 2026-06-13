@@ -7,20 +7,23 @@ import { extractResumeDataService } from '../services/resume/extractResumeData.s
 
 export async function uploadResume(req, res, next) {
   try {
-    if (!req.file) {
+    const uploadedFile = req.file || req.files?.resume?.[0] || req.files?.file?.[0];
+
+    if (!uploadedFile) {
       throw new ApiError(400, 'Resume file is required');
     }
 
-    if (!req.user?.sub) {
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) {
       throw new ApiError(401, 'Unauthorized request');
     }
 
-    const fileInfo = await uploadResumeService(req.file);
+    const fileInfo = await uploadResumeService(uploadedFile);
     const resumeText = await parseResumeService(fileInfo.storedFilePath);
     const extractedData = extractResumeDataService(resumeText);
 
     const resumeDocument = await Resume.create({
-      userId: req.user.sub,
+      userId,
       originalFileName: fileInfo.originalFileName,
       storedFilePath: fileInfo.storedFilePath,
       resumeText,
@@ -43,8 +46,9 @@ export async function uploadResume(req, res, next) {
       },
     });
   } catch (error) {
-    if (req.file?.path) {
-      await fs.unlink(req.file.path).catch(() => {});
+    const uploadedFile = req.file || req.files?.resume?.[0] || req.files?.file?.[0];
+    if (uploadedFile?.path) {
+      await fs.unlink(uploadedFile.path).catch(() => {});
     }
     next(error);
   }

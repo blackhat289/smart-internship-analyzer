@@ -2,14 +2,37 @@ import mongoose from 'mongoose';
 
 const analysisSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    resumeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Resume', required: true },
-    readinessScore: Number,
-    strengths: [String],
-    skillGaps: [String],
-    summary: String,
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+      trim: true,
+    },
+    selectedRole: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    readinessScore: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+    strengths: {
+      type: [String],
+      default: [],
+    },
+    skillGaps: {
+      type: [String],
+      default: [],
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
+
+analysisSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.model('Analysis', analysisSchema);
