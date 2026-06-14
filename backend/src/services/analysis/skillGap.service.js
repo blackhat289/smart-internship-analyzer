@@ -1,4 +1,4 @@
-import { getRequiredSkillsForRole } from './readinessScore.service.js';
+import { getRequiredSkillsForRole } from '../../utils/roleMappings.js';
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -10,7 +10,5 @@ export async function skillGapService({ selectedRole, skills = [] }) {
 
   const skillGaps = requiredSkills.filter((skill) => !candidateSkills.has(normalize(skill)));
 
-  return {
-    skillGaps,
-  };
+  return { skillGaps };
 }

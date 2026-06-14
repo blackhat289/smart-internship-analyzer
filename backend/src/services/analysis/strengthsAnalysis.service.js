@@ -1,4 +1,4 @@
-import { getRequiredSkillsForRole } from './readinessScore.service.js';
+import { getRequiredSkillsForRole } from '../../utils/roleMappings.js';
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
@@ -11,12 +11,26 @@ export async function strengthsAnalysisService({ selectedRole, skills = [], proj
 
   const strengths = [];
 
-  if (matchedSkills.some((skill) => ['react', 'angular', 'vue', 'html', 'css', 'javascript', 'tailwind css'].includes(normalize(skill)))) {
+  const frontendSignals = ['react', 'angular', 'vue', 'html', 'css', 'javascript', 'tailwind css'];
+  const backendSignals = ['node.js', 'express.js', 'mongodb', 'sql', 'rest api'];
+  const dataSignals = ['python', 'sql', 'excel', 'pandas', 'data visualization', 'statistics'];
+  const devopsSignals = ['linux', 'docker', 'kubernetes', 'ci/cd', 'aws', 'git'];
+
+  if (matchedSkills.some((skill) => frontendSignals.includes(normalize(skill)))) {
     strengths.push('Strong Frontend Development Skills');
+    strengths.push('Good Frontend Fundamentals');
   }
 
-  if (matchedSkills.some((skill) => ['node.js', 'express.js', 'mongodb', 'sql', 'rest api'].includes(normalize(skill)))) {
+  if (matchedSkills.some((skill) => backendSignals.includes(normalize(skill)))) {
     strengths.push('Solid Backend and API Fundamentals');
+  }
+
+  if (matchedSkills.some((skill) => dataSignals.includes(normalize(skill)))) {
+    strengths.push('Strong Analytical and Data Handling Skills');
+  }
+
+  if (matchedSkills.some((skill) => devopsSignals.includes(normalize(skill)))) {
+    strengths.push('Practical DevOps and Deployment Awareness');
   }
 
   if (matchedSkills.length >= Math.max(3, Math.ceil(requiredSkills.length * 0.5))) {
@@ -24,7 +38,7 @@ export async function strengthsAnalysisService({ selectedRole, skills = [], proj
   }
 
   if (Array.isArray(projects) && projects.length > 0) {
-    strengths.push('Relevant Academic or Portfolio Projects');
+    strengths.push('Relevant Academic Projects');
   }
 
   if (!strengths.length && matchedSkills.length > 0) {

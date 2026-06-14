@@ -5,6 +5,7 @@ import Card from '../../components/common/Card';
 import ResumeUploader from '../../components/resume/ResumeUploader';
 import RoleSelector from '../../components/resume/RoleSelector';
 import { resumeService } from '../../services/resumeService';
+import { analysisService } from '../../services/analysisService';
 import useAuth from '../../hooks/useAuth';
 import { isPdfFile } from '../../utils/validators';
 
@@ -32,7 +33,14 @@ export default function ResumeAnalysisPage() {
 
     try {
       setIsSubmitting(true);
-      await resumeService.uploadResume(formData);
+      const uploadResponse = await resumeService.uploadResume(formData);
+      const skills = uploadResponse?.data?.skills || [];
+      await analysisService.generateAnalysis({
+        userId,
+        selectedRole: role,
+        skills,
+        projects: [],
+      });
       toast.success('Resume uploaded successfully.');
     } catch (error) {
       toast.error(typeof error === 'string' ? error : 'Resume upload failed.');
@@ -43,7 +51,7 @@ export default function ResumeAnalysisPage() {
 
   return (
     <div className="min-h-[calc(100vh-160px)] bg-[var(--color-background)] px-4 py-10 text-[color:var(--color-text)] sm:px-6 lg:py-14">
-      <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
+      <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
         <header className="mx-auto w-full max-w-3xl text-center">
           <h2 className="text-4xl font-black tracking-tight sm:text-5xl">Resume Analysis</h2>
           <p className="mt-4 text-lg font-semibold text-[color:var(--color-primary)]">
@@ -91,6 +99,7 @@ export default function ResumeAnalysisPage() {
             </div>
           </Card>
         </section>
+
       </div>
     </div>
   );

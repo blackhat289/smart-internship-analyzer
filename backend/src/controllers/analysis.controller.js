@@ -1,15 +1,15 @@
+import Analysis from '../models/Analysis.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import Analysis from '../models/Analysis.js';
 import { readinessScoreService } from '../services/analysis/readinessScore.service.js';
 import { skillGapService } from '../services/analysis/skillGap.service.js';
 import { strengthsAnalysisService } from '../services/analysis/strengthsAnalysis.service.js';
 
 function validateAnalysisPayload(body) {
-  const { userId, selectedRole, skills, projects } = body || {};
+  const { selectedRole, skills, projects } = body || {};
 
-  if (!userId || !selectedRole) {
-    throw new ApiError(400, 'userId and selectedRole are required');
+  if (!selectedRole) {
+    throw new ApiError(400, 'selectedRole is required');
   }
 
   if (skills !== undefined && !Array.isArray(skills)) {
@@ -21,11 +21,20 @@ function validateAnalysisPayload(body) {
   }
 }
 
+function resolveUserId(req) {
+  return req.body?.userId || req.user?.sub || req.user?.id;
+}
+
 export async function generateAnalysis(req, res, next) {
   try {
     validateAnalysisPayload(req.body);
 
-    const { userId, selectedRole, skills = [], projects = [] } = req.body;
+    const userId = resolveUserId(req);
+    if (!userId) {
+      throw new ApiError(401, 'User identification is required');
+    }
+
+    const { selectedRole, skills = [], projects = [] } = req.body;
 
     const [readinessScoreResult, strengthsResult, skillGapResult] = await Promise.all([
       readinessScoreService({ selectedRole, skills, projects }),
@@ -82,6 +91,10 @@ export async function getAnalysisByUserId(req, res, next) {
 export async function getAnalysisReportById(req, res, next) {
   try {
     const { analysisId } = req.params;
+
+    if (!analysisId) {
+      throw new ApiError(400, 'analysisId is required');
+    }
 
     const analysis = await Analysis.findById(analysisId);
 

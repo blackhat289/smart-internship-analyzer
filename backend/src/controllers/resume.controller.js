@@ -53,3 +53,27 @@ export async function uploadResume(req, res, next) {
     next(error);
   }
 }
+
+export async function getLatestResume(req, res, next) {
+  try {
+    const userId = req.user?.sub || req.user?.id;
+
+    if (!userId) {
+      throw new ApiError(401, 'Unauthorized request');
+    }
+
+    const resume = await Resume.findOne({ userId }).sort({ createdAt: -1 });
+
+    if (!resume) {
+      throw new ApiError(404, 'Resume not found for this user');
+    }
+
+    return res.json({
+      success: true,
+      message: 'Resume fetched successfully',
+      data: { resume },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

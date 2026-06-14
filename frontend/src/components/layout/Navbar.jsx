@@ -1,11 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
 import { APP_NAME } from '../../utils/constants';
-import Button from '../common/Button';
-import useAuth from '../../hooks/useAuth';
 
 export default function Navbar() {
-  const { token, logout } = useAuth();
-
   return (
     <header className="sticky top-0 z-40 border-b border-[#17395f] bg-gradient-to-r from-[#0b2340] via-[#0f2d52] to-[#123b6a] shadow-[0_10px_30px_rgba(7,18,34,0.28)]">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-2 py-4 sm:px-3">
@@ -25,7 +21,6 @@ export default function Navbar() {
             <NavLink to="/dashboard" className="text-sm font-medium text-white/90 transition hover:text-[color:var(--color-accent)]">Dashboard</NavLink>
             <NavLink to="/profile" className="text-sm font-medium text-white/90 transition hover:text-[color:var(--color-accent)]">Profile</NavLink>
           </nav>
-          {token ? <Button variant="secondary" onClick={logout}>Logout</Button> : <div className="h-10" />}
         </div>
       </div>
     </header>

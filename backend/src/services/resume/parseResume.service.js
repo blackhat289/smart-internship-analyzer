@@ -1,5 +1,9 @@
 import fs from 'fs/promises';
+import { createRequire } from 'module';
 import { ApiError } from '../../utils/ApiError.js';
+
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 export async function parseResumeService(filePath) {
   if (!filePath) {
@@ -8,10 +12,7 @@ export async function parseResumeService(filePath) {
 
   try {
     const pdfBuffer = await fs.readFile(filePath);
-    const { PDFParse } = await import('pdf-parse');
-    const parser = new PDFParse({ data: pdfBuffer });
-    const data = await parser.getText();
-    await parser.destroy().catch(() => {});
+    const data = await pdfParse(pdfBuffer);
     const text = (data.text || '').replace(/\r/g, '').trim();
 
     if (!text) {
@@ -23,7 +24,6 @@ export async function parseResumeService(filePath) {
 
     return text;
   } catch (error) {
-    console.error('Resume parsing failed:', error);
     if (error instanceof ApiError) {
       throw error;
     }

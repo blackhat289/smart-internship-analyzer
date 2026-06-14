@@ -9,7 +9,7 @@ import {
 const router = Router();
 
 router.post('/generate', authMiddleware, generateAnalysis);
-router.get('/:userId', authMiddleware, getAnalysisByUserId);
 router.get('/report/:analysisId', authMiddleware, getAnalysisReportById);
+router.get('/:userId', authMiddleware, getAnalysisByUserId);
 
 export default router;

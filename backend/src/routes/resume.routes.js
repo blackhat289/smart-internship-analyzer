@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { upload, resumeUploadErrorHandler } from '../middlewares/upload.middleware.js';
-import { uploadResume } from '../controllers/resume.controller.js';
+import { uploadResume, getLatestResume } from '../controllers/resume.controller.js';
 
 const router = Router();
 
@@ -15,5 +15,7 @@ router.post(
   resumeUploadErrorHandler,
   uploadResume
 );
+
+router.get('/latest', authMiddleware, getLatestResume);
 
 export default router;
