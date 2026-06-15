@@ -1,1 +1,16 @@
-{}
+[
+  {
+    "role": "Backend Engineering Intern",
+    "domain": "Backend",
+    "description": "Build APIs, integrate databases, and ship backend services.",
+    "required_skills": ["Python", "FastAPI", "SQL", "Git"],
+    "tags": ["backend", "api"]
+  },
+  {
+    "role": "Machine Learning Intern",
+    "domain": "Machine Learning",
+    "description": "Work on training pipelines, evaluation, and model iteration.",
+    "required_skills": ["Python", "Machine Learning", "NumPy", "scikit-learn"],
+    "tags": ["ml", "ai"]
+  }
+]

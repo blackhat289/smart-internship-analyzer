@@ -1,1 +1,16 @@
-{}
+[
+  {
+    "title": "Backend Developer Path",
+    "domain": "Backend",
+    "description": "Core backend engineering path for API and services development.",
+    "skills": ["Python", "FastAPI", "SQL", "Docker", "Git"],
+    "tags": ["backend", "api", "services"]
+  },
+  {
+    "title": "Machine Learning Engineer Path",
+    "domain": "Machine Learning",
+    "description": "Path focused on ML systems, model development, and deployment.",
+    "skills": ["Python", "Machine Learning", "scikit-learn", "TensorFlow", "Docker"],
+    "tags": ["ml", "ai", "models"]
+  }
+]

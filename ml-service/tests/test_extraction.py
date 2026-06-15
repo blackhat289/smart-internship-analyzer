@@ -1,7 +1,15 @@
-"""Tests for extraction scaffolding."""
+from services.extraction.pdf_parser import extract_pdf_text
+from services.extraction.section_detector import detect_sections
 
 
-def test_extraction_placeholder() -> None:
-    """Placeholder test to keep the suite runnable."""
+import re
 
-    assert True
+text = extract_pdf_text("uploads/MANSI_Resume.pdf")
+
+headers = re.findall(
+    r'(Education|Projects|Technical Skills|Achievements\s*&\s*Certifications)',
+    text,
+    re.IGNORECASE
+)
+
+print(headers)

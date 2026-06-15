@@ -1,1 +1,16 @@
-{}
+[
+  {
+    "title": "Resume Analyzer API",
+    "domain": "Backend",
+    "description": "Build a service that parses resumes and scores ATS readiness.",
+    "skills": ["Python", "FastAPI", "SQL", "Docker"],
+    "tags": ["api", "analysis"]
+  },
+  {
+    "title": "ML Skill Classifier",
+    "domain": "Machine Learning",
+    "description": "Train a classifier to predict candidate domain from resume text.",
+    "skills": ["Python", "Machine Learning", "scikit-learn"],
+    "tags": ["ml", "nlp"]
+  }
+]

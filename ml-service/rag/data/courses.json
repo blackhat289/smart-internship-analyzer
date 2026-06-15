@@ -1,1 +1,16 @@
-{}
+[
+  {
+    "title": "FastAPI for Production",
+    "domain": "Backend",
+    "description": "Learn to build scalable APIs with FastAPI and PostgreSQL.",
+    "skills": ["Python", "FastAPI", "SQL", "Docker"],
+    "url": "https://example.com/fastapi"
+  },
+  {
+    "title": "Applied Machine Learning",
+    "domain": "Machine Learning",
+    "description": "Covers ML workflow, model evaluation, and deployment basics.",
+    "skills": ["Python", "Machine Learning", "NumPy", "scikit-learn"],
+    "url": "https://example.com/ml"
+  }
+]

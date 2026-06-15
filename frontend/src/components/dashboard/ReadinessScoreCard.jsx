@@ -1,5 +1,17 @@
-import Card from '../common/Card';
+import ScoreCard from '../common/ScoreCard';
 
-export default function ReadinessScoreCard({ score = 72 }) {
-  return <Card><div className="text-sm text-slate-500">Readiness Score</div><div className="text-4xl font-black text-slate-900">{score}%</div></Card>;
+export default function ReadinessScoreCard({ readiness = {} }) {
+  return (
+    <ScoreCard
+      title="Readiness Score"
+      value={readiness.overall ?? 0}
+      progress={readiness.overall ?? 0}
+      details={[
+        { label: 'Skills', value: `${readiness.skills_score ?? 0}%` },
+        { label: 'Projects', value: `${readiness.projects_score ?? 0}%` },
+        { label: 'Experience', value: `${readiness.experience_score ?? 0}%` },
+        { label: 'Certifications', value: `${readiness.certification_score ?? 0}%` },
+      ]}
+    />
+  );
 }
