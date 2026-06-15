@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Resume Skill Gap Predictor",
+    "domain": "AI/ML",
+    "description": "Build a tool that predicts missing skills from a resume and target role."
+  },
+  {
+    "title": "REST API Portfolio",
+    "domain": "Backend Development",
+    "description": "Create a documented backend API with validation, auth, and tests."
+  }
+]

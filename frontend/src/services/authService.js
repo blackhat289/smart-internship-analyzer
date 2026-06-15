@@ -5,14 +5,20 @@ const userKey = 'sia_user';
 
 export const authService = {
   login: async (payload) => {
-    const response = await api.post('/auth/login', payload);
+    const response = await api.post('/auth/login', {
+      ...payload,
+      email: String(payload?.email || '').trim().toLowerCase(),
+    });
     const authData = response?.data?.data || {};
     localStorage.setItem(tokenKey, authData?.token || '');
     localStorage.setItem(userKey, JSON.stringify(authData?.user || null));
     return authData;
   },
   register: async (payload) => {
-    const response = await api.post('/auth/register', payload);
+    const response = await api.post('/auth/register', {
+      ...payload,
+      email: String(payload?.email || '').trim().toLowerCase(),
+    });
     const authData = response?.data?.data || {};
     localStorage.setItem(tokenKey, authData?.token || '');
     localStorage.setItem(userKey, JSON.stringify(authData?.user || null));

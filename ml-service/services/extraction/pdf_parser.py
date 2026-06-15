@@ -17,7 +17,7 @@ def _clean_text(text: str) -> str:
 
     lines = [line.strip() for line in text.splitlines()]
     compact = [line for line in lines if line]
-    return WHITESPACE_REPLACEMENT.join(compact).strip()
+    return "\n".join(compact).strip()
 
 
 def _extract_with_pdfplumber(pdf_path: str) -> str:

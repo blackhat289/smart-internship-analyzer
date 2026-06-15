@@ -4,7 +4,8 @@ import { signToken } from '../../config/jwt.js';
 import { userRepository } from '../../repositories/user.repository.js';
 
 export async function loginService({ email, password }) {
-  const user = await userRepository.findByEmail(email);
+  const normalizedEmail = email?.trim().toLowerCase();
+  const user = await userRepository.findByEmail(normalizedEmail);
   if (!user) throw new ApiError(401, 'Invalid credentials');
 
   const ok = await bcrypt.compare(password, user.passwordHash);

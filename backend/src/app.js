@@ -37,6 +37,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(loggerMiddleware);
 
+app.get('/', (_req, res) =>
+  res.json({
+    success: true,
+    message: 'Smart Internship Analyzer API is running',
+    health: '/health',
+    apiBase: '/api',
+  })
+);
 app.get('/health', (_req, res) =>
   res.json({
     success: true,

@@ -27,6 +27,38 @@ const analysisSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    technologiesToLearn: {
+      type: [String],
+      default: [],
+    },
+    recommendedCourses: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+    suggestedProjects: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+    internshipRecommendations: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+    ats_analysis: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    career_insights: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    recruiter_summary: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    resume_improvement_suggestions: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

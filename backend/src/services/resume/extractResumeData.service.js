@@ -93,7 +93,13 @@ export function extractSkills(text = '') {
   ];
 
   const normalizedText = text.toLowerCase();
-  return uniqueStrings(skillKeywords.filter((skill) => normalizedText.includes(skill.toLowerCase())));
+  return uniqueStrings(
+    skillKeywords.filter((skill) => {
+      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`\\b${escaped}\\b`, 'i');
+      return pattern.test(normalizedText);
+    })
+  );
 }
 
 function extractSectionLines(text, headings) {

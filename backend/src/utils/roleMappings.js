@@ -19,6 +19,11 @@ export const ROLE_MAPPINGS = {
   'data analyst': ['SQL', 'Excel', 'Python', 'Pandas', 'Data Visualization', 'Statistics'],
   'machine learning engineer': ['Python', 'Machine Learning', 'TensorFlow', 'PyTorch', 'Data Structures', 'Algorithms'],
   'devops engineer': ['Linux', 'Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Git'],
+  'ai/ml intern': ['Python', 'Machine Learning', 'TensorFlow', 'PyTorch', 'Data Structures', 'Algorithms'],
+  'ui/ux intern': ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'HTML', 'CSS'],
+  'ui ux intern': ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'HTML', 'CSS'],
+  'ui/ux designer': ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'HTML', 'CSS'],
+  'ai/ml engineer': ['Python', 'Machine Learning', 'TensorFlow', 'PyTorch', 'Data Structures', 'Algorithms'],
 };
 
 export function normalizeRole(role) {

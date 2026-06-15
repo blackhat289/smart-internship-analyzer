@@ -22,8 +22,15 @@ export default function ResumeAnalysisPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await analysisService.analyzeResume(file);
-      await analysisService.saveDashboardSnapshot(result);
+      const result = await analysisService.analyzeResume(file, role);
+      if (!result || typeof result !== 'object') {
+        throw new Error('Analysis service returned an empty response.');
+      }
+      analysisService.saveDashboardSnapshot(result);
+      const stored = analysisService.getStoredDashboard();
+      if (!stored) {
+        throw new Error('Unable to persist analysis results.');
+      }
       toast.success('Resume analyzed successfully.');
       navigate('/dashboard');
     } catch (error) {

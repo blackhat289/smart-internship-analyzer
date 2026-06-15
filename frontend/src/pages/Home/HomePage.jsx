@@ -46,7 +46,7 @@ export default function HomePage() {
     try {
       setLoading(true);
       const authData = await authService.login({
-        email: form.get('email'),
+        email: String(form.get('email') || '').trim(),
         password: form.get('password'),
       });
       setAuthState(authData);
@@ -73,8 +73,8 @@ export default function HomePage() {
     try {
       setLoading(true);
       const authData = await authService.register({
-        name: form.get('name'),
-        email: form.get('email'),
+        name: String(form.get('name') || '').trim(),
+        email: String(form.get('email') || '').trim(),
         password,
       });
       setAuthState(authData);

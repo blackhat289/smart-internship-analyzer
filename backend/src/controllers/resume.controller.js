@@ -4,6 +4,11 @@ import { ApiError } from '../utils/ApiError.js';
 import { uploadResumeService } from '../services/resume/uploadResume.service.js';
 import { parseResumeService } from '../services/resume/parseResume.service.js';
 import { extractResumeDataService } from '../services/resume/extractResumeData.service.js';
+import { extractSkillsFromML } from '../services/ai/mlClient.service.js';
+
+function uniqueStrings(values = []) {
+  return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))];
+}
 
 export async function uploadResume(req, res, next) {
   try {
@@ -21,6 +26,16 @@ export async function uploadResume(req, res, next) {
     const fileInfo = await uploadResumeService(uploadedFile);
     const resumeText = await parseResumeService(fileInfo.storedFilePath);
     const extractedData = extractResumeDataService(resumeText);
+    let mlExtraction = null;
+    try {
+      mlExtraction = await extractSkillsFromML(resumeText);
+    } catch (error) {
+      console.warn('ML skill extraction skipped during resume upload:', error?.message || error);
+    }
+    const mergedSkills = uniqueStrings([
+      ...(Array.isArray(extractedData.skills) ? extractedData.skills : []),
+      ...(Array.isArray(mlExtraction?.skills) ? mlExtraction.skills : []),
+    ]);
 
     const resumeDocument = await Resume.create({
       userId,
@@ -29,7 +44,7 @@ export async function uploadResume(req, res, next) {
       resumeText,
       personalInfo: extractedData.personalInfo,
       education: extractedData.education,
-      skills: extractedData.skills,
+      skills: mergedSkills,
       projects: extractedData.projects,
       experience: extractedData.experience,
       certifications: extractedData.certifications,
@@ -43,6 +58,8 @@ export async function uploadResume(req, res, next) {
         resumeId: resumeDocument._id,
         fileName: resumeDocument.originalFileName,
         skills: resumeDocument.skills,
+        projects: resumeDocument.projects,
+        personalInfo: resumeDocument.personalInfo,
       },
     });
   } catch (error) {

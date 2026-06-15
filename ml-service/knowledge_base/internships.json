@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Backend Engineering Intern",
+    "domain": "Backend Development",
+    "description": "Work on APIs, databases, and service integrations using Python and FastAPI."
+  },
+  {
+    "title": "Frontend Engineering Intern",
+    "domain": "Frontend Development",
+    "description": "Build responsive interfaces with React, TypeScript, and CSS."
+  }
+]
