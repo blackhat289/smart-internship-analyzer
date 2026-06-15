@@ -1,27 +1,3 @@
-SKILL_CATALOG = [
-    "React",
-    "Node.js",
-    "Express.js",
-    "JavaScript",
-    "TypeScript",
-    "HTML",
-    "CSS",
-    "Tailwind CSS",
-    "MongoDB",
-    "SQL",
-    "Python",
-    "Java",
-    "Django",
-    "Flask",
-    "FastAPI",
-    "Git",
-    "REST API",
-    "GraphQL",
-    "Docker",
-    "Kubernetes",
-    "AWS",
-    "CI/CD",
-    "Machine Learning",
-    "TensorFlow",
-    "PyTorch",
-]
+"""Starter skill catalog used by extraction scaffolding."""
+
+SKILL_CATALOG = ["Python", "FastAPI", "SQL"]

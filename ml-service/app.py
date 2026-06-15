@@ -1,23 +1,21 @@
+"""FastAPI application entry point for the ML service."""
+
 from fastapi import FastAPI
 
-from models.schemas import ResumeTextRequest, SkillExtractionResponse
-from services.resume_skill_extractor import extract_resume_skills
+from api.routes.analyze_resume import router as analyze_resume_router
+from api.routes.health import router as health_router
+from api.routes.recommendations import router as recommendations_router
+from config import settings
 
-app = FastAPI(
-    title="Smart Internship Analyzer ML Service",
-    version="1.0.0",
-)
+app = FastAPI(title=settings.app_name, version=settings.app_version)
 
-
-@app.get("/health")
-async def health_check():
-    return {"success": True, "message": "OK"}
+app.include_router(health_router)
+app.include_router(analyze_resume_router)
+app.include_router(recommendations_router)
 
 
-@app.post("/extract-skills", response_model=SkillExtractionResponse)
-async def extract_skills(payload: ResumeTextRequest):
-    extracted = extract_resume_skills(payload.resumeText)
-    return {
-        "skills": extracted["skills"],
-        "projects": extracted["projects"],
-    }
+@app.get("/")
+async def root() -> dict:
+    """Basic landing endpoint for the service."""
+
+    return {"service": settings.app_name, "version": settings.app_version}
