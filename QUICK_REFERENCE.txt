@@ -1,0 +1,160 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                 SMART INTERNSHIP ANALYZER - QUICK REFERENCE                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+🚀 SERVICES STATUS
+┌────────────────────────────────────────────────────────────────────────────┐
+│ SERVICE           PORT    STATUS    MONGODB    DOCS/UI
+│ ─────────────────────────────────────────────────────────────────────────
+│ ML Service        8000    ✓ RUN     N/A        /docs (Swagger)
+│ Backend API       5000    ✓ RUN     ✓ CONN     /health
+│ Frontend          5173    [Ready]   N/A        (Vite Dev)
+└────────────────────────────────────────────────────────────────────────────┘
+
+🔗 API ENDPOINTS
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ML SERVICE (localhost:8000)
+│
+│ Documentation & Health
+│   GET  /                       → API overview
+│   GET  /health                 → Health check
+│   GET  /docs                   → Interactive Swagger UI ⭐
+│   GET  /openapi.json           → OpenAPI spec
+│
+│ Resume Processing
+│   POST /extract                → Extract from file (PDF/DOCX)
+│   POST /extract-skills         → Extract from text
+│   POST /analyze                → Full resume analysis + RAG
+│   POST /match-internship       → Skill matching
+│   POST /recommend              → Get recommendations + RAG
+│
+│ ─────────────────────────────────────────────────────────────────────────
+│ BACKEND (localhost:5000)
+│
+│ Core
+│   GET  /                       → API info
+│   GET  /health                 → Health + DB status
+│
+│ API Routes (Authenticated)
+│   /api/auth/*                  → Login, register, auth
+│   /api/profile/*               → User profiles & settings
+│   /api/resume/*                → Resume CRUD operations
+│   /api/analysis/*              → Analysis history & details
+│   /api/recommendations/*       → Career recommendations
+└────────────────────────────────────────────────────────────────────────────┘
+
+📝 EXAMPLE CALLS
+
+# Test ML Service
+curl http://localhost:8000/
+
+# Analyze Resume (ML Service)
+curl -X POST http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"resumeText":"Your resume...", "selectedRole":"Backend Developer"}'
+
+# Test Backend
+curl http://localhost:5000/
+
+# Backend Health (includes DB status)
+curl http://localhost:5000/health
+
+# Interactive Testing
+Open: http://localhost:8000/docs
+
+✨ KEY FEATURES
+
+✓ RAG System          Resume analysis enriched with knowledge base
+✓ FAISS Vector DB    Fast semantic search over courses/projects
+✓ Skill Gap Analysis  Identify missing skills automatically
+✓ Recommendations    Personalized career guidance with RAG
+✓ Resume Extraction  PDF & DOCX support with text extraction
+✓ Interview Guides   Knowledge base with interview prep content
+
+🛠️ TECHNOLOGY STACK
+
+Frontend             Vite + React + Tailwind CSS
+Backend              Express.js + Node.js + MongoDB
+ML Service           FastAPI + Python 3.14
+Vector Database      FAISS (IndexFlatIP)
+Embeddings          Sentence-Transformers (all-MiniLM-L6-v2)
+Resume Processing   PyPDF, python-docx, pdf-parse
+Authentication      JWT + bcryptjs
+
+📂 KEY FILES
+
+ML Service
+  app/main.py              → FastAPI factory
+  app/api/routes.py        → All endpoints (JUST UPDATED)
+  app/rag/                 → RAG system implementation
+  knowledge_base/          → JSON documents for RAG
+  requirements.txt         → Python dependencies
+
+Backend
+  src/server.js            → Express server
+  src/app.js               → Express app setup
+  src/routes/              → Route definitions
+  src/config/env.js        → Configuration
+  package.json             → Node dependencies
+
+Frontend
+  src/main.jsx             → Entry point
+  src/App.jsx              → Main component
+  src/components/          → React components
+  vite.config.js           → Vite configuration
+  package.json             → NPM dependencies
+
+⚡ QUICK START COMMANDS
+
+Terminal 1 - ML Service
+  cd ml-service
+  $env:PYTHONPATH = "$pwd"
+  python -m uvicorn app.main:app --reload --port 8000
+
+Terminal 2 - Backend
+  cd backend
+  npm install    # First time only
+  npm start
+
+Terminal 3 - Frontend
+  cd frontend
+  npm install    # First time only
+  npm run dev
+
+🌐 ACCESS POINTS
+
+ML Service API              http://localhost:8000
+ML Service Docs             http://localhost:8000/docs        ⭐ Try endpoints here
+Backend API                 http://localhost:5000
+Backend Health              http://localhost:5000/health
+Frontend Application        http://localhost:5173             ⭐ Main UI
+
+❓ TROUBLESHOOTING
+
+Port Already in Use
+  netstat -ano | findstr :[PORT]
+  taskkill /PID [PID] /F
+
+Python Module Not Found
+  $env:PYTHONPATH = "C:\path\to\ml-service"
+
+MongoDB Not Connecting
+  Backend will work without it (non-critical)
+  Start MongoDB separately if needed
+
+Frontend Not Loading
+  npm install
+  npm run dev
+  Clear browser cache
+
+📊 RECENT IMPROVEMENTS
+
+✓ Fixed 404 error on ML service root (/)
+✓ Added API documentation endpoint
+✓ Verified RAG system functionality
+✓ Created comprehensive test suite
+✓ Documented all endpoints
+
+═════════════════════════════════════════════════════════════════════════════
+
+Ready to use! Access http://localhost:8000/docs to test the ML service APIs.

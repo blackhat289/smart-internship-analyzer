@@ -1,0 +1,50 @@
+[
+  {
+    "text": "Backend Engineering Intern Backend Development Work on APIs, databases, and service integrations using Python and FastAPI.",
+    "source": "internships",
+    "type": "internships",
+    "title": "Backend Engineering Intern",
+    "domain": "Backend Development",
+    "description": "Work on APIs, databases, and service integrations using Python and FastAPI."
+  },
+  {
+    "text": "Frontend Engineering Intern Frontend Development Build responsive interfaces with React, TypeScript, and CSS.",
+    "source": "internships",
+    "type": "internships",
+    "title": "Frontend Engineering Intern",
+    "domain": "Frontend Development",
+    "description": "Build responsive interfaces with React, TypeScript, and CSS."
+  },
+  {
+    "text": "FastAPI for Production APIs Backend Development Learn API design, validation, auth, and deployment.",
+    "source": "courses",
+    "type": "courses",
+    "title": "FastAPI for Production APIs",
+    "domain": "Backend Development",
+    "description": "Learn API design, validation, auth, and deployment."
+  },
+  {
+    "text": "Machine Learning Specialization AI/ML Core ML foundations for internships and entry-level roles.",
+    "source": "courses",
+    "type": "courses",
+    "title": "Machine Learning Specialization",
+    "domain": "AI/ML",
+    "description": "Core ML foundations for internships and entry-level roles."
+  },
+  {
+    "text": "Resume Skill Gap Predictor AI/ML Build a tool that predicts missing skills from a resume and target role.",
+    "source": "projects",
+    "type": "projects",
+    "title": "Resume Skill Gap Predictor",
+    "domain": "AI/ML",
+    "description": "Build a tool that predicts missing skills from a resume and target role."
+  },
+  {
+    "text": "REST API Portfolio Backend Development Create a documented backend API with validation, auth, and tests.",
+    "source": "projects",
+    "type": "projects",
+    "title": "REST API Portfolio",
+    "domain": "Backend Development",
+    "description": "Create a documented backend API with validation, auth, and tests."
+  }
+]

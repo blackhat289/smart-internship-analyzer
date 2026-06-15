@@ -49,8 +49,35 @@ def map_role_to_domain(role: str | None) -> str | None:
     return None
 
 
+def _primary_domain_name(analysis: AnalysisResult) -> str:
+    if not analysis.domains:
+        return "General"
+    first = analysis.domains[0]
+    return first.domain if hasattr(first, "domain") else first.get("domain", "General")
+
+
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+@router.get("/")
+async def root() -> dict:
+    """Root endpoint - API documentation."""
+    return {
+        "success": True,
+        "service": "Resume Analyzer ML Service",
+        "version": "2.0.0",
+        "endpoints": {
+            "health": "/health",
+            "extract": "POST /extract (upload file)",
+            "extract_skills": "POST /extract-skills (from text)",
+            "analyze": "POST /analyze (analyze resume)",
+            "match_internship": "POST /match-internship (match skills)",
+            "recommend": "POST /recommend (get recommendations)",
+        },
+        "docs": "/docs",
+        "openapi": "/openapi.json",
+    }
 
 
 @router.get("/health")
@@ -97,7 +124,7 @@ async def analyze(payload: dict = Body(default_factory=dict)) -> AnalysisResult:
     
     # Query RAG store to enrich analysis courses/projects/internships if store loads successfully
     try:
-        primary_domain = analysis.domains[0]["domain"] if analysis.domains else "General"
+        primary_domain = _primary_domain_name(analysis)
         context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
         rag_summary = summarize_context_docs(context_docs)
         courses = [doc for doc in context_docs if doc.get("type") == "courses"]
@@ -164,7 +191,7 @@ async def recommend(payload: dict = Body(default_factory=dict)) -> Recommendatio
     target_domain = map_role_to_domain(target_role)
     analysis = analyze_resume(resume, target_domain=target_domain)
     
-    primary_domain = analysis.domains[0]["domain"] if analysis.domains else "General"
+    primary_domain = _primary_domain_name(analysis)
     context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
     rag_summary = summarize_context_docs(context_docs)
     prompt = build_recommendation_prompt(analysis, context_docs)
