@@ -7,6 +7,8 @@ import logging
 import os
 from dataclasses import dataclass
 from typing import Any
+from google import genai
+from google.genai import types
 
 import httpx
 
@@ -15,42 +17,49 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class LLMClient:
-    """OpenAI-compatible LLM client with a deterministic fallback."""
+    """Gemini LLM client."""
 
-    provider: str = "openai"
-    model: str = "gpt-4o-mini"
-    base_url: str = "https://api.openai.com/v1"
+    provider: str = "gemini"
+    model: str = "gemini-2.5-flash"
     api_key: str | None = None
 
-    def generate_json(self, prompt: str, schema_hint: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Return structured JSON for the provided prompt."""
+    def generate_json(
+        self,
+        prompt: str,
+        schema_hint: dict[str, Any] | None = None,) -> dict[str, Any]:
 
         if not self.api_key:
             return {}
 
         system_prompt = (
             "Return valid JSON only. Do not wrap the response in markdown."
-            + (f" Expected shape: {json.dumps(schema_hint)}" if schema_hint else "")
-        )
-        try:
-            response = httpx.post(
-                f"{self.base_url.rstrip('/')}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0,
-                },
-                timeout=45.0,
+            + (
+                f" Expected shape: {json.dumps(schema_hint)}"
+                if schema_hint
+                else ""
             )
-            response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+        )
+
+        try:
+            client = genai.Client(api_key=self.api_key)
+
+            response = client.models.generate_content(
+                model=self.model,
+                contents=f"{system_prompt}\n\n{prompt}",
+                config=types.GenerateContentConfig(
+                    temperature=0
+                ),
+            )
+
+            content = response.text
+
             return json.loads(_strip_json_fences(content))
-        except Exception as exc:  # pragma: no cover - provider/network fallback
-            logger.warning("LLM JSON generation failed: %s", exc)
+
+        except Exception as exc:
+            logger.warning(
+                "Gemini JSON generation failed: %s",
+                exc,
+            )
             return {}
 
 
@@ -65,10 +74,14 @@ def get_default_llm_client() -> LLMClient:
     """Build an LLM client from environment variables."""
 
     return LLMClient(
-        provider=os.getenv("LLM_PROVIDER", "openai"),
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        api_key=os.getenv("OPENAI_API_KEY") or None,
+        provider="gemini",
+        model=os.getenv(
+            "GEMINI_MODEL",
+            "gemini-2.5-flash",
+        ),
+        api_key=os.getenv(
+            "GEMINI_API_KEY"
+        ),
     )
 
 

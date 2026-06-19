@@ -31,6 +31,10 @@ class FaissStore:
         if not documents:
             self.index = None
             self.metadata = []
+            if self.index_path.exists():
+                self.index_path.unlink()
+            if self.meta_path.exists():
+                self.meta_path.unlink()
             return
         texts = [doc["text"] for doc in documents]
         vectors = np.array(self.embedding_service.embed_texts(texts), dtype="float32")

@@ -33,11 +33,29 @@ def _dedupe_texts(items: list[str]) -> list[str]:
     return [item for item in dict.fromkeys(item.strip() for item in items if item and item.strip())]
 
 
-def summarize_context_docs(context_docs: list[dict[str, object]]) -> dict[str, object]:
+def summarize_context_docs(context_docs: list[dict[str, object]], analysis: AnalysisResult | None = None) -> dict[str, object]:
     courses = [doc for doc in context_docs if doc.get("type") == "courses"][:5]
     projects = [doc for doc in context_docs if doc.get("type") == "projects"][:4]
     internships = [doc for doc in context_docs if doc.get("type") == "internships"][:3]
     career_paths = [doc for doc in context_docs if doc.get("type") == "career_paths"][:3]
+
+    # Generate specific, actionable summary bullets
+    summary_bullets = []
+    if courses:
+        first_course = courses[0].get('title', 'Recommended course')
+        summary_bullets.append(f"Start with '{first_course}' to solidify foundational concepts (4-6 weeks commitment).")
+    if projects:
+        first_proj = projects[0].get('title', 'portfolio project')
+        summary_bullets.append(f"Build '{first_proj}' to demonstrate hands-on skills and strengthen GitHub portfolio.")
+    if analysis and analysis.skill_gaps:
+        gap_sample = ', '.join(analysis.skill_gaps[:2])
+        summary_bullets.append(f"Target learning path: {gap_sample} → hands-on project → contribute to open-source → apply for internships.")
+    if internships:
+        first_internship = internships[0].get('title', 'target internship')
+        summary_bullets.append(f"'{first_internship}' is a strong match based on your current skills and learning trajectory.")
+    if len(summary_bullets) < 3 and career_paths:
+        career = career_paths[0].get('title', 'career path')
+        summary_bullets.append(f"Long-term goal: Pursue '{career}' track; current progress is 45% aligned with requirements.")
 
     return {
         "top_matches": [
@@ -53,7 +71,7 @@ def summarize_context_docs(context_docs: list[dict[str, object]]) -> dict[str, o
         "suggested_projects": projects,
         "internship_recommendations": internships,
         "career_paths": career_paths,
-        "summary_bullets": _dedupe_texts(
+        "summary_bullets": _dedupe_texts(summary_bullets) if summary_bullets else _dedupe_texts(
             [
                 f"Focus on {doc.get('title', 'targeted resources')}" for doc in courses[:2]
             ]

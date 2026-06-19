@@ -116,7 +116,15 @@ async def analyze(payload: dict = Body(default_factory=dict)) -> AnalysisResult:
     if payload.get("skills"):
         resume.skills = list(dict.fromkeys([*resume.skills, *payload.get("skills", [])]))
     if payload.get("projects"):
-        resume.projects = payload.get("projects", [])
+        from app.models.schemas import ProjectItem
+        resume.projects = [
+            ProjectItem(
+                title=p.get("title", "") if isinstance(p, dict) else p.title,
+                description=p.get("description", "") if isinstance(p, dict) else p.description,
+                technologies=p.get("technologies", []) if isinstance(p, dict) else p.technologies
+            )
+            for p in payload.get("projects", [])
+        ]
         
     target_role = payload.get("selected_role") or payload.get("selectedRole") or payload.get("target_role")
     target_domain = map_role_to_domain(target_role)
@@ -126,7 +134,7 @@ async def analyze(payload: dict = Body(default_factory=dict)) -> AnalysisResult:
     try:
         primary_domain = _primary_domain_name(analysis)
         context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
-        rag_summary = summarize_context_docs(context_docs)
+        rag_summary = summarize_context_docs(context_docs, analysis=analysis)
         courses = [doc for doc in context_docs if doc.get("type") == "courses"]
         projects = [doc for doc in context_docs if doc.get("type") == "projects"]
         internships = [doc for doc in context_docs if doc.get("type") == "internships"]
@@ -185,7 +193,15 @@ async def recommend(payload: dict = Body(default_factory=dict)) -> Recommendatio
     if payload.get("skills"):
         resume.skills = list(dict.fromkeys([*resume.skills, *payload.get("skills", [])]))
     if payload.get("projects"):
-        resume.projects = payload.get("projects", [])
+        from app.models.schemas import ProjectItem
+        resume.projects = [
+            ProjectItem(
+                title=p.get("title", "") if isinstance(p, dict) else p.title,
+                description=p.get("description", "") if isinstance(p, dict) else p.description,
+                technologies=p.get("technologies", []) if isinstance(p, dict) else p.technologies
+            )
+            for p in payload.get("projects", [])
+        ]
         
     target_role = payload.get("selected_role") or payload.get("selectedRole") or payload.get("target_role")
     target_domain = map_role_to_domain(target_role)
@@ -193,7 +209,7 @@ async def recommend(payload: dict = Body(default_factory=dict)) -> Recommendatio
     
     primary_domain = _primary_domain_name(analysis)
     context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
-    rag_summary = summarize_context_docs(context_docs)
+    rag_summary = summarize_context_docs(context_docs, analysis=analysis)
     prompt = build_recommendation_prompt(analysis, context_docs)
     client = OllamaClient(settings.ollama_base_url, settings.ollama_model)
     try:

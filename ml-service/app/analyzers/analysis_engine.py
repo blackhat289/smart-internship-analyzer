@@ -94,13 +94,28 @@ def analyze_resume(resume: ResumeData, target_domain: str | None = None) -> Anal
         hire_rec = "Buy"
     elif readiness < 35:
         hire_rec = "Pass"
-    overall_feedback = f"The candidate shows a readiness score of {readiness}% for {primary['domain']} roles. "
+    
+    # Generate personalized overall feedback
+    skill_count = len(resume.skills)
+    project_count = len(resume.projects) if resume.projects else 0
+    missing_count = len(missing)
+    strengths_count = len(strengths)
+    
     if readiness >= 75:
-        overall_feedback += "Highly qualified candidate with strong alignment in skills and project experience."
-    elif readiness >= 45:
-        overall_feedback += "Moderate fit. Needs to bridge the skill gaps by working on target projects and certifications."
+        overall_feedback = f"Candidate is highly qualified for {primary['domain']} with {skill_count} relevant skills and {project_count} projects demonstrating domain expertise. "
+        overall_feedback += f"Strong alignment across {strengths_count} key competency areas. Ready for senior-level internship roles."
+    elif readiness >= 55:
+        overall_feedback = f"Candidate has moderate fit for {primary['domain']} (Match: {match_percentage}%). "
+        overall_feedback += f"Has {skill_count} core skills but missing {missing_count} critical ones ({', '.join(missing[:2])}). "
+        overall_feedback += f"With {project_count} project(s) on record, prioritize building depth in {primary['domain']} before applying to top-tier roles."
+    elif readiness >= 35:
+        overall_feedback = f"Candidate shows foundational interest in {primary['domain']} with {skill_count} skills and {project_count} project(s). "
+        overall_feedback += f"Significant gaps exist: missing {missing_count} essential skills ({', '.join(missing[:2])}). "
+        overall_feedback += f"Recommend 4-6 months focused skill development before pursuing internships."
     else:
-        overall_feedback += "Early-stage candidate. Recommend focusing on core domain fundamentals and building initial projects."
+        overall_feedback = f"Candidate is early-stage in {primary['domain']} (Readiness: {readiness}%). "
+        overall_feedback += f"Currently has {skill_count} skills but lacks {missing_count} foundational ones ({', '.join(missing[:3])}). "
+        overall_feedback += f"Start with domain fundamentals; not yet ready for competitive internships."
     recruiter_summary = {
         "strengths": strengths,
         "concerns": concerns,
@@ -108,20 +123,24 @@ def analyze_resume(resume: ResumeData, target_domain: str | None = None) -> Anal
         "hire_recommendation": hire_rec,
     }
     
-    # Generate resume improvement suggestions
+    # Generate personalized resume improvement suggestions
     resume_suggestions = []
     if not resume.contact_info.linkedin:
-        resume_suggestions.append("Add your LinkedIn profile to improve professional searchability.")
+        resume_suggestions.append(f"Add LinkedIn profile link to connect with {primary['domain']} recruiters and improve discoverability.")
     if not resume.contact_info.github:
-        resume_suggestions.append("Link your GitHub profile to showcase code quality and project repositories.")
+        resume_suggestions.append("Link GitHub profile to showcase actual code; recruiters review repositories before interviews.")
     if missing:
-        resume_suggestions.append(f"Incorporate missing domain skills such as {', '.join(missing[:3])} into your skills section.")
+        missing_str = ', '.join(missing[:3])
+        resume_suggestions.append(f"Add missing {primary['domain']} skills: {missing_str}. These are required by 80%+ of top internship positions.")
     if not resume.projects:
-        resume_suggestions.append("Add at least 2 detailed projects showing your practical expertise.")
+        resume_suggestions.append(f"Add 2+ concrete projects with {primary['domain']} tech stack (e.g., Flask backend, React frontend). Projects are critical; many recruiters skip resumes without them.")
+    else:
+        project_tech = ', '.join(set([skill for p in resume.projects for skill in resume.skills[:2]]))  
+        resume_suggestions.append(f"Enhance existing {len(resume.projects)} projects: add quantifiable metrics (e.g., '50% faster queries'), tech stack details, and GitHub links.")
     if not resume.experience:
-        resume_suggestions.append("Include internships, freelance work, or open source contributions in an experience section.")
-    if len(resume_suggestions) < 3:
-        resume_suggestions.append("Enhance project descriptions with quantifiable impact metrics (e.g., 'improved speed by 20%').")
+        resume_suggestions.append(f"Add internships, freelance work, or open-source contributions. Experience section differentiates candidates in {primary['domain']} roles.")
+    if len(resume_suggestions) < 4:
+        resume_suggestions.append(f"Specify learning timeline for {', '.join(missing[:2])}; mention expected proficiency level (e.g., 'Learning Python, Intermediate level in 2 months').")
 
     return AnalysisResult(
         resume=resume,
