@@ -79,6 +79,8 @@ def _extract_section_items(lines: list[str], section: str) -> list[EducationItem
     current_item = None
     degree_keywords = ["bachelor", "master", "ph.d", "b.tech", "m.tech", "b.s", "m.s", "b.sc", "m.sc", "bca", "mca", "bba", "mba", "diploma", "degree", "class xii", "class x", "high school", "ssc", "hsc"]
     year_re = re.compile(r"\b(19|20)\d{2}\b")
+    cgpa_re = re.compile(r"\b(?:cgpa|gpa)\s*[:\-]?\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
+    percentage_re = re.compile(r"\bpercentage\s*[:\-]?\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
     
     for line in section_lines:
         lower_line = line.lower()
@@ -87,21 +89,29 @@ def _extract_section_items(lines: list[str], section: str) -> list[EducationItem
         if is_new_entry:
             if current_item:
                 items.append(current_item)
-            current_item = EducationItem(degree=line, institution="", year="", details="")
+            current_item = EducationItem(degree=line, specialization="", institution="", start_year="", graduation_year="", cgpa="", percentage="")
         else:
             if not current_item.institution:
                 years = year_re.findall(line)
                 if years:
-                    current_item.year = " - ".join(years) if len(years) > 1 else years[0]
+                    current_item.start_year = years[0]
+                    current_item.graduation_year = years[-1]
                 current_item.institution = line
             else:
                 years = year_re.findall(line)
-                if years and not current_item.year:
-                    current_item.year = " - ".join(years) if len(years) > 1 else years[0]
-                if current_item.details:
-                    current_item.details += " | " + line
-                else:
-                    current_item.details = line
+                if years:
+                    if not current_item.start_year:
+                        current_item.start_year = years[0]
+                    if not current_item.graduation_year:
+                        current_item.graduation_year = years[-1]
+                cgpa_match = cgpa_re.search(line)
+                if cgpa_match and not current_item.cgpa:
+                    current_item.cgpa = cgpa_match.group(1)
+                percentage_match = percentage_re.search(line)
+                if percentage_match and not current_item.percentage:
+                    current_item.percentage = percentage_match.group(1)
+                if not current_item.specialization and any(token in lower_line for token in ["computer science", "engineering", "data science", "information technology", "electronics", "mechanical", "civil", "electrical"]):
+                    current_item.specialization = line
                     
     if current_item:
         items.append(current_item)
@@ -232,4 +242,3 @@ def _looks_like_heading(line: str) -> bool:
 
 def _unique(items: list[str]) -> list[str]:
     return list(dict.fromkeys(item.strip() for item in items if item.strip()))
-

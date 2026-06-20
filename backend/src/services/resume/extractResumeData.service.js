@@ -2,6 +2,8 @@ const SECTION_SPLITTER = /\n\s*\n/g;
 
 const KNOWN_SECTION_HEADINGS = [
   'education',
+  'academic details',
+  'academics',
   'projects',
   'project',
   'experience',
@@ -137,14 +139,101 @@ function extractSectionLines(text, headings) {
 }
 
 export function extractEducation(text = '') {
-  return extractSectionLines(text, ['education']).map((entry) => ({
-    title: entry,
-    organization: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-  }));
+  const lines = extractSectionLines(text, ['education', 'academic details', 'academics']);
+  const records = [];
+  let current = null;
+
+  const degreeRe = /\b(?:b\.?tech\.?|m\.?tech\.?|b\.?sc\.?|m\.?sc\.?|b\.?e\.?|m\.?e\.?|bca|mca|mba|phd|bachelor[^,\n]*|master[^,\n]*)\b/i;
+  const yearRangeRe = /\b(19\d{2}|20\d{2})\s*(?:-|to|–)\s*(19\d{2}|20\d{2}|present|current)\b/i;
+  const yearRe = /\b(19\d{2}|20\d{2})\b/g;
+  const cgpaRe = /\b(?:cgpa|gpa)\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i;
+  const percentageRe = /\bpercentage\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i;
+
+  for (const entry of lines) {
+    const lower = entry.toLowerCase();
+    const isDegreeLine = degreeRe.test(entry) || (!current && /in\s+[a-z]/i.test(entry));
+
+    if (isDegreeLine) {
+      if (current) records.push(current);
+      const degreeMatch = entry.match(degreeRe);
+      const degree = degreeMatch ? degreeMatch[0].replace(/\s+in\s+.*/i, '').trim() : entry;
+      const specializationMatch = entry.match(/\b(?:in|of|for)\s+([^,()|]+)$/i);
+      current = {
+        degree,
+        specialization: specializationMatch ? specializationMatch[1].trim() : '',
+        institution: '',
+        start_year: '',
+        graduation_year: '',
+        cgpa: '',
+        percentage: '',
+        title: degree,
+        organization: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        location: '',
+      };
+      continue;
+    }
+
+    if (!current) {
+      current = {
+        degree: entry,
+        specialization: '',
+        institution: '',
+        start_year: '',
+        graduation_year: '',
+        cgpa: '',
+        percentage: '',
+        title: entry,
+        organization: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        location: '',
+      };
+      continue;
+    }
+
+    if (!current.institution && !yearRangeRe.test(entry) && !cgpaRe.test(entry) && !percentageRe.test(entry)) {
+      current.institution = entry;
+    }
+
+    const rangeMatch = entry.match(yearRangeRe);
+    if (rangeMatch) {
+      current.start_year = rangeMatch[1];
+      if (!/present|current/i.test(rangeMatch[2])) {
+        current.graduation_year = rangeMatch[2];
+      }
+      current.startDate = rangeMatch[1];
+      current.endDate = /present|current/i.test(rangeMatch[2]) ? '' : rangeMatch[2];
+    } else {
+      const years = entry.match(yearRe) || [];
+      if (years.length) {
+        if (!current.start_year) current.start_year = years[0];
+        current.graduation_year = years[years.length - 1];
+        current.startDate = current.startDate || years[0];
+        current.endDate = current.endDate || years[years.length - 1];
+      }
+    }
+
+    const cgpaMatch = entry.match(cgpaRe);
+    if (cgpaMatch) current.cgpa = cgpaMatch[1];
+
+    const percentageMatch = entry.match(percentageRe);
+    if (percentageMatch) current.percentage = percentageMatch[1];
+
+    if (!current.specialization && /\b(?:computer science|information technology|electronics|mechanical|civil|electrical|data science|engineering)\b/i.test(entry)) {
+      current.specialization = entry;
+    } else if (current.description) {
+      current.description += ` | ${entry}`;
+    } else {
+      current.description = entry;
+    }
+  }
+
+  if (current) records.push(current);
+  return records.slice(0, 8);
 }
 
 export function extractProjects(text = '') {

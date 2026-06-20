@@ -16,9 +16,12 @@ class ContactInfo(BaseModel):
 
 class EducationItem(BaseModel):
     degree: str = ""
+    specialization: str = ""
     institution: str = ""
-    year: str = ""
-    details: str = ""
+    start_year: str = ""
+    graduation_year: str = ""
+    cgpa: str = ""
+    percentage: str = ""
 
 
 class ProjectItem(BaseModel):

@@ -38,9 +38,12 @@ class EducationSchema(BaseModel):
     """Education payload extracted from a résumé."""
 
     degree: str = ""
+    specialization: str = ""
     institution: str = ""
-    cgpa: str = ""
+    start_year: str = ""
     graduation_year: str = ""
+    cgpa: str = ""
+    percentage: str = ""
 
 
 class ProjectSchema(BaseModel):
@@ -84,9 +87,12 @@ class EducationExtractionSchema(BaseModel):
     """Structured education extraction payload."""
 
     degree: str = ""
+    specialization: str = ""
     institution: str = ""
-    cgpa: str = ""
+    start_year: str = ""
     graduation_year: str = ""
+    cgpa: str = ""
+    percentage: str = ""
 
 
 class ExperienceExtractionSchema(BaseModel):

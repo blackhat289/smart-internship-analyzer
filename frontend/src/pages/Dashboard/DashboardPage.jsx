@@ -155,8 +155,9 @@ export default function DashboardPage() {
               <AnalysisListSection title="Education" items={sections.education || []} renderItem={(item) => (
                 <div className="rounded-2xl border border-slate-200 p-4">
                   <div className="font-semibold text-slate-900">{item.degree || 'Education'}</div>
+                  <div className="text-sm text-slate-600">{item.specialization || 'Specialization not available'}</div>
                   <div className="text-sm text-slate-600">{item.institution || 'Institution not available'}</div>
-                  <div className="text-xs text-slate-500">{[item.cgpa, item.graduation_year].filter(Boolean).join(' • ') || 'No academic details available'}</div>
+                  <div className="text-xs text-slate-500">{[item.start_year, item.graduation_year, item.cgpa, item.percentage].filter(Boolean).join(' • ') || 'No academic details available'}</div>
                 </div>
               )} />
               <AnalysisListSection title="Projects" items={sections.projects || []} renderItem={(item) => (
@@ -342,10 +343,12 @@ function normalizeDashboardPayload(payload = {}) {
 
   const education = (resume.education || []).map((item) => ({
     degree: item.degree || item.title || 'Education',
+    specialization: item.specialization || '',
     institution: item.institution || item.organization || '',
-    cgpa: item.cgpa || item.score || '',
+    start_year: item.start_year || item.startDate || '',
     graduation_year: item.graduation_year || item.year || '',
-    details: item.details || item.description || '',
+    cgpa: item.cgpa || item.score || '',
+    percentage: item.percentage || '',
   }));
 
   const projects = (resume.projects || []).map((item) => ({
