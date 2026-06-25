@@ -19,6 +19,19 @@ export async function forgotPasswordService({ email }) {
   try {
     await sendPasswordResetEmail({ to: user.email, resetUrl, name: user.name });
   } catch (error) {
+    console.warn(`[WARNING] Failed to send reset email: ${error.message || error}`);
+    console.log(`\n==================================================`);
+    console.log(`[PASSWORD RESET LINK FOR ${user.email}]:`);
+    console.log(resetUrl);
+    console.log(`==================================================\n`);
+
+    if (env.nodeEnv !== 'production') {
+      return {
+        message: 'SMTP email failed. Fallback: Reset link generated for development.',
+        resetUrl,
+      };
+    }
+
     throw new ApiError(500, error?.message || 'Unable to send password reset email');
   }
 
