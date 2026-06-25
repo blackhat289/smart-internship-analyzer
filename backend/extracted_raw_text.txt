@@ -1,0 +1,73 @@
+Mansi
+
++91 9520688550
+#
+mansinegi739@gmail.com
+ï
+linkedin.com/in/mansi-negi-259697274/
+§
+github.com/blackhat289
+Education
+Graphic Era Hill University, Dehradun2023 - Present
+B.Tech in Computer Science & Engineering9.05/10 CGPA
+Doon International School, Dehradun2020 - 2021
+12th84.6%
+S.V.M.H.S.S Kyunkaleshwar,Pauri2018 - 2019
+10th93.6%
+Projects
+Genie:  GenAI-Powered Text-to-SQL Platform|React.js, Vite, Node.js, Express.js, MongoDB, Gemini AI, RAG
+•
+Engineered an Generative sql query platform usingGemini AI and RAGto generate schema-aware SQL queries.
+•
+Executed schema analysis and validation workflows to identify and map primary key–foreign key relationships between
+database tables.
+•
+Designed a unified schema ingestion framework supportingSQL,CSV and Excelsources with automated metadata
+indexing.
+•
+Created interactive schema mapping, analytics reporting, and query tracking capabilities to improve user insights and
+navigation.
+AI Code Generator|React.js, Node.js, Tailwind CSS, AI/LLM API
+•
+Developed an AI-powered platform that generates code from natural language prompts using LLM APIs.
+•
+Implemented bug detection,code-smell analysis, optimization suggestions and code explanation workflows.
+•
+Supported multi-language code generation across Python,Java,JavaScript,C++ and SQL through AI-driven pipelines.
+•
+Generated syntactically correct code for 80%+ of evaluated prompts across multiple programming languages.
+Campus Compass|Spring Boot, React.js, MySQL
+•
+Developed a smart campus navigation and resource discovery platform for students and visitors.
+•
+Implemented graph-based shortest-path algorithms and facility search services.
+•
+Designed scalable REST APIs for navigation and location-based recommendations.
+•
+Managed150+ mapped locations, achieved95% route accuracy, and reduced lookup latency by42%.
+Safest Path Navigator|Python, Streamlit, Scikit-learn, OSRM API
+•
+Built an intelligent route recommendation system using geospatial and crime-risk analysis.
+•
+Integrated routing services and machine-learning-based safety scoring mechanisms.
+•
+Implemented route comparison, risk visualization, and safety prediction features.
+•
+Achieved88% prediction accuracy,0.85 F1-score, and processed5,000+ geospatial records.
+Technical Skills
+Languages:  Java, C++, Python
+Backend:  Spring Boot, Node.js, Express.js, REST APIs, JWT
+Frontend:  React.js, Tailwind CSS
+Databases:  MySQL, MongoDB, PostgreSQL
+Cloud & DevOps:  AWS, Docker
+Achievements & Certifications
+•
+400+ DSA Problems on LeetCodeProfile
+•
+AWS Knowledge:  Cloud Essentials - Training Badge (Oct 2025)Credential
+•
+AWS: Well-Architected Proficient Badge (Apr 2025)Credential
+•
+ServiceNow Certification (2026)Credential
+•
+Tata Group GenAI Powered Data Analytics Job Simulation (June 2026)Certificate

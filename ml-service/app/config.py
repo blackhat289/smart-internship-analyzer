@@ -5,28 +5,29 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     app_name: str = "Resume Analyzer ML Service"
     app_version: str = "2.0.0"
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3"
-    ollama_timeout_seconds: int = 120
-    ollama_max_retries: int = 2
-    ollama_retry_backoff_seconds: float = 1.0
-    # LLM provider selection: 'ollama' or 'gemini'
-    llm_provider: str = "ollama"
-    # Gemini (Google) settings
-    gemini_api_key: str | None = None
-    gemini_model: str | None = None
+    # OpenRouter settings
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openai/gpt-4o-mini"
+    openrouter_site_url: str = "http://localhost:5173"
+    openrouter_site_name: str = "Smart Internship Analyzer"
+    ollama_timeout_seconds: int = 120  # reused as general LLM timeout
     embedding_model: str = "all-MiniLM-L6-v2"
     base_dir: str = str(Path(__file__).resolve().parents[1])
     knowledge_base_path: str = str(Path(__file__).resolve().parents[1] / "knowledge_base")
     faiss_index_path: str = str(Path(__file__).resolve().parents[1] / "knowledge_base" / "faiss.index")
     faiss_meta_path: str = str(Path(__file__).resolve().parents[1] / "knowledge_base" / "faiss_meta.json")
     max_upload_mb: int = 10
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 @lru_cache

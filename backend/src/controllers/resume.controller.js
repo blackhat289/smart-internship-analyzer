@@ -30,7 +30,7 @@ export async function uploadResume(req, res, next) {
 
     const fileInfo = await uploadResumeService(uploadedFile);
     const resumeText = await parseResumeService(fileInfo.storedFilePath);
-    const extractedData = extractResumeDataService(resumeText);
+    const extractedData = await extractResumeDataService(resumeText);
     validateEducationRecords(extractedData.education);
     const flattenedSkills = flattenSkills(extractedData.skills);
     const parseQuality = assessParseQuality(extractedData);
@@ -118,7 +118,7 @@ function shouldRefreshResume(resume) {
 
 async function refreshResumeDocument(resume) {
   const resumeText = resume.resumeText || (await parseResumeService(resume.storedFilePath));
-  const extractedData = extractResumeDataService(resumeText);
+  const extractedData = await extractResumeDataService(resumeText);
   validateEducationRecords(extractedData.education);
   const parseQuality = assessParseQuality(extractedData);
   const update = {
@@ -159,5 +159,43 @@ function validateEducationRecords(education = []) {
     if (!degree || !institution) {
       throw new ApiError(400, 'Education extraction failed validation');
     }
+  }
+}
+
+export async function updateResumeData(req, res, next) {
+  try {
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) {
+      throw new ApiError(401, 'Unauthorized request');
+    }
+
+    const { personalInfo, skills, education, projects, certifications } = req.body;
+
+    let resume = await Resume.findOne({ userId });
+    if (!resume) {
+      throw new ApiError(404, 'Resume not found to update. Please upload a resume first.');
+    }
+
+    const update = {
+      personalInfo: personalInfo || resume.personalInfo,
+      skills: skills || resume.skills,
+      education: Array.isArray(education) ? education : resume.education,
+      projects: Array.isArray(projects) ? projects : resume.projects,
+      certifications: Array.isArray(certifications) ? certifications : resume.certifications,
+    };
+
+    const updatedResume = await Resume.findOneAndUpdate(
+      { userId },
+      { $set: update },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Resume profile data updated successfully',
+      data: updatedResume,
+    });
+  } catch (error) {
+    next(error);
   }
 }

@@ -13,4 +13,8 @@ export const resumeService = {
     const { data } = await api.post('/resume/parse', payload);
     return data;
   },
+  updateResume: async (payload) => {
+    const { data } = await api.put('/resume/update', payload);
+    return data;
+  },
 };

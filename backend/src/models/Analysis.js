@@ -23,6 +23,10 @@ const analysisSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    weaknesses: {
+      type: [String],
+      default: [],
+    },
     skillGaps: {
       type: [String],
       default: [],

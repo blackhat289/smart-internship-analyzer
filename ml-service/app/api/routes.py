@@ -13,7 +13,7 @@ from app.extractors.file_extractor import extract_text_from_file
 from app.extractors.resume_extractor import extract_resume_data
 from app.models.schemas import AnalysisResult, MatchScoreResponse, RecommendationResponse, ResumeData
 from app.rag.retriever import retrieve_context_for_candidate
-from app.services.ollama_client import OllamaClient
+from app.services.openrouter_client import OpenRouterClient
 from app.services.recommendation_engine import (
     build_recommendation_prompt,
     fallback_recommendations,
@@ -211,41 +211,22 @@ async def recommend(payload: dict = Body(default_factory=dict)) -> Recommendatio
     context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
     rag_summary = summarize_context_docs(context_docs, analysis=analysis)
     prompt = build_recommendation_prompt(analysis, context_docs)
-    # Initialize LLM client based on configured provider
+    # Call OpenRouter to generate AI recommendations
     generated: str = ""
-    if settings.llm_provider and settings.llm_provider.lower() == "gemini":
-        from app.services.gemini_client import GeminiClient
-
-        if not settings.gemini_api_key:
-            logger.error("Gemini selected but `gemini_api_key` not configured in settings")
-        else:
-            client = GeminiClient(settings.gemini_api_key, model=settings.gemini_model, timeout_seconds=settings.ollama_timeout_seconds)
-            try:
-                generated = await client.generate(prompt)
-            except Exception:
-                logger.exception("Gemini generation failed")
+    if not settings.openrouter_api_key:
+        logger.error("OpenRouter selected but `openrouter_api_key` not configured in settings")
     else:
-        client = OllamaClient(
-            settings.ollama_base_url,
-            settings.ollama_model,
+        client = OpenRouterClient(
+            settings.openrouter_api_key,
+            model=settings.openrouter_model,
             timeout_seconds=settings.ollama_timeout_seconds,
-            max_retries=settings.ollama_max_retries,
-            backoff_seconds=settings.ollama_retry_backoff_seconds,
+            site_url=settings.openrouter_site_url,
+            site_name=settings.openrouter_site_name,
         )
         try:
             generated = await client.generate(prompt)
-        if generated.strip():
-            projects = [doc for doc in context_docs if doc.get("type") == "projects"][:5]
-            return RecommendationResponse(
-                internship_recommendations=context_docs[:3],
-                career_guidance=[generated.strip()],
-                missing_skill_recommendations=analysis.skill_gaps,
-                certification_suggestions=[doc.get("title", "") for doc in context_docs if doc.get("type") == "courses"],
-                learning_roadmap=[{"step": i + 1, "item": gap} for i, gap in enumerate(analysis.skill_gaps[:5])],
-                suggested_projects=projects,
-            )
-    except Exception as exc:
-        logger.exception("Ollama generation failed")
+        except Exception:
+            logger.exception("OpenRouter generation failed")
     fallback = fallback_recommendations(analysis, context_docs)
     fallback["career_guidance"] = [*rag_summary["summary_bullets"], *fallback["career_guidance"]][:5]
     fallback["certification_suggestions"] = [

@@ -13,10 +13,9 @@ const env = {
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
-  aiProvider: process.env.AI_PROVIDER || 'mock',
-  geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  aiProvider: process.env.AI_PROVIDER || 'openrouter',
+  openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  openrouterModel: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
   fastapiBaseUrl: process.env.FASTAPI_BASE_URL || '',
 };
 

@@ -1,3 +1,5 @@
+import { geminiJsonRequest } from '../../integrations/gemini/geminiClient.js';
+
 const HEADING_ALIASES = {
   skills: ['skills', 'technical skills', 'core competencies', 'technical competency', 'technologies'],
   education: ['education', 'academic details', 'academics', 'academics & education'],
@@ -268,32 +270,69 @@ function parseProjects(lines) {
   const section = sectionLines(lines, HEADING_ALIASES.projects);
   const projects = [];
   let current = null;
+
+  const isTechLine = (line) =>
+    /\b(technologies?|tech stack|built with|tools?|stack|languages?)\s*[:\-]/i.test(line) ||
+    /^(technologies?|tech stack|built with|tools?)\s*:/i.test(line);
+
+  const looksLikeTitle = (line) => {
+    if (!line || line.length > 100) return false;
+    // Bullet points are NOT titles
+    if (/^[•\-\*►▶→]\s+/.test(line)) return false;
+    // Lines that start with a lowercase word are likely descriptions
+    if (/^[a-z]/.test(line)) return false;
+    // Skip date-only lines, year ranges, URLs
+    if (/^\d{4}[\s\-–—]\d{4}|^\d{4}$|^https?:/i.test(line)) return false;
+    // A title is a short, capitalized line — likely a project name
+    return true;
+  };
+
   for (const line of section) {
     if (isLikelyHeading(line)) break;
-    const titleLike = !/^[•\-*]\s*/.test(line) && line.length < 120;
-    if (titleLike || !current) {
-      if (current) projects.push(current);
-      current = { title: line, summary: '', technologies: [], achievements: [], complexity: '' };
+    const clean = line.replace(/^[•\-\*►▶→]\s*/, '').trim();
+    if (!clean) continue;
+
+    if (looksLikeTitle(line) && (!current || current.achievements.length > 0 || current.summary)) {
+      // Start a new project
+      if (current && (current.title || current.summary)) projects.push(current);
+      current = { title: clean, summary: '', technologies: [], achievements: [], complexity: '' };
       continue;
     }
-    const clean = line.replace(/^[•\-*]\s*/, '').trim();
-    if (/technology|stack|built with|using/i.test(clean)) {
-      current.technologies = unique([...current.technologies, ...clean.split(/[,|/]/).map((item) => item.trim())]);
-    } else if (clean) {
+
+    if (!current) {
+      current = { title: clean, summary: '', technologies: [], achievements: [], complexity: '' };
+      continue;
+    }
+
+    if (isTechLine(line)) {
+      // Extract tech list from "Technologies: React, Node.js, ..." pattern
+      const techPart = clean.replace(/^[^:]+:\s*/i, '');
+      current.technologies = unique([
+        ...current.technologies,
+        ...techPart.split(/[,|\/]/).map((t) => t.trim()).filter((t) => t.length < 40),
+      ]);
+    } else {
+      // It's a description / achievement bullet
       current.achievements.push(clean);
       current.summary = current.summary ? `${current.summary} ${clean}` : clean;
     }
   }
-  if (current) projects.push(current);
-  return projects.slice(0, 8);
+
+  if (current && (current.title || current.summary)) projects.push(current);
+
+  // Post-process: remove entries where "title" is clearly a description sentence
+  return projects
+    .filter((p) => p.title && p.title.length < 100 && !/^[a-z]/.test(p.title))
+    .slice(0, 8);
 }
+
 
 function parseCertifications(lines) {
   const section = sectionLines(lines, HEADING_ALIASES.certifications);
   return unique(section.map((line) => line.replace(/^[•\-*]\s*/, '').trim()).filter(Boolean)).slice(0, 12);
 }
 
-export function extractResumeDataService(text = '') {
+export function extractResumeDataHeuristics(text = '') {
   const normalizedText = normalizeText(text);
   const lines = normalizedText.split('\n').map((line) => line.trim()).filter(Boolean);
   const personalInfo = extractContact(lines, normalizedText);
@@ -304,4 +343,142 @@ export function extractResumeDataService(text = '') {
     projects: parseProjects(lines),
     certifications: parseCertifications(lines),
   };
+}
+
+export async function extractResumeDataService(text = '') {
+  console.log('[AI Parser] Starting AI resume extraction...');
+  try {
+    const prompt = `You are an expert resume parsing assistant. Extract structured information from the resume text below and return a JSON object with EXACTLY the following format:
+
+{
+  "personalInfo": {
+    "name": "Full Name",
+    "email": "Email address",
+    "phoneNumber": "Phone number",
+    "github": "GitHub URL or empty string",
+    "linkedin": "LinkedIn URL or empty string",
+    "leetcode": "LeetCode URL or empty string",
+    "location": "Location (city, country) or empty string"
+  },
+  "skills": {
+    "programmingLanguages": ["List of programming languages"],
+    "frontend": ["Frontend technologies/frameworks"],
+    "backend": ["Backend technologies/frameworks"],
+    "database": ["Databases"],
+    "cloud": ["Cloud technologies/platforms/devops"],
+    "aiMl": ["AI/ML libraries/concepts"],
+    "tools": ["Developer tools/utilities/other"]
+  },
+  "education": [
+    {
+      "degree": "Degree (e.g. B.Tech, Master of Science, High School, etc.)",
+      "specialization": "Specialization/Branch (e.g. Computer Science)",
+      "institution": "Name of school, college, or university",
+      "cgpa": "CGPA, GPA or percentage (e.g. 8.5/10, 92%, 3.8/4.0)",
+      "startYear": "Start year (YYYY)",
+      "endYear": "End year/Graduation year (YYYY or Present)"
+    }
+  ],
+  "projects": [
+    {
+      "title": "Project Title",
+      "summary": "Brief 1-2 sentence description of the project",
+      "technologies": ["Technologies/skills used in this project"],
+      "achievements": ["Key bullet points describing what was done or achieved"],
+      "complexity": "Estimated complexity: 'High', 'Medium', or 'Low'"
+    }
+  ],
+  "certifications": ["List of certifications obtained"]
+}
+
+Rules:
+1. ONLY return the JSON object. Do not include markdown code block formatting or explanations.
+2. Be accurate to the text. Do not invent details.
+3. For education: every record MUST have both 'degree' and 'institution'. If one is missing or blank, omit the record or try to infer them from the line.
+4. For projects: extract all projects listed in the resume. Keep the achievements specific to the resume.
+
+Resume Text:
+${text}`;
+
+    const aiResult = await geminiJsonRequest(prompt);
+    if (!aiResult?.text) {
+      throw new Error('AI response was empty');
+    }
+
+    console.log('[AI Parser] AI response received. Parsing JSON payload...');
+
+    let parsed;
+    try {
+      parsed = JSON.parse(aiResult.text);
+    } catch (parseErr) {
+      // Sometimes models put json inside markdown blocks even in json mode
+      const match = aiResult.text.match(/```json\s*([\s\S]*?)\s*```/) || aiResult.text.match(/```\s*([\s\S]*?)\s*```/);
+      if (match) {
+        parsed = JSON.parse(match[1]);
+      } else {
+        throw parseErr;
+      }
+    }
+
+    // Format fields to ensure structural compliance with expectations
+    const personalInfo = parsed.personalInfo || {};
+    const skills = parsed.skills || {};
+    let education = Array.isArray(parsed.education) ? parsed.education : [];
+    let projects = Array.isArray(parsed.projects) ? parsed.projects : [];
+    let certifications = Array.isArray(parsed.certifications) ? parsed.certifications : [];
+
+    // Clean and validate education to prevent validation failures (degree and institution are required by schema validation)
+    education = education
+      .map(item => ({
+        degree: String(item?.degree || '').trim(),
+        specialization: String(item?.specialization || '').trim(),
+        institution: String(item?.institution || '').trim(),
+        cgpa: String(item?.cgpa || '').trim(),
+        startYear: String(item?.startYear || item?.start_year || '').trim(),
+        endYear: String(item?.endYear || item?.end_year || item?.graduation_year || '').trim(),
+      }))
+      .filter(item => item.degree && item.institution);
+
+    projects = projects.map(item => ({
+      title: String(item?.title || '').trim(),
+      summary: String(item?.summary || '').trim(),
+      technologies: Array.isArray(item?.technologies) ? item.technologies.map(String) : [],
+      achievements: Array.isArray(item?.achievements) ? item.achievements.map(String) : [],
+      complexity: String(item?.complexity || 'Medium').trim(),
+    })).filter(item => item.title);
+
+    certifications = certifications.map(String).filter(Boolean);
+
+    console.log(`[AI Parser] AI parsing successful! Extracted:`);
+    console.log(` - ${education.length} education items`);
+    console.log(` - ${projects.length} projects:`, projects.map(p => p.title).join(', '));
+    console.log(` - ${certifications.length} certifications`);
+
+    return {
+      personalInfo: {
+        name: String(personalInfo.name || '').trim(),
+        email: String(personalInfo.email || '').trim(),
+        phoneNumber: String(personalInfo.phoneNumber || '').trim(),
+        github: String(personalInfo.github || '').trim(),
+        linkedin: String(personalInfo.linkedin || '').trim(),
+        leetcode: String(personalInfo.leetcode || '').trim(),
+        location: String(personalInfo.location || '').trim(),
+      },
+      skills: {
+        programmingLanguages: Array.isArray(skills.programmingLanguages) ? skills.programmingLanguages.map(String) : [],
+        frontend: Array.isArray(skills.frontend) ? skills.frontend.map(String) : [],
+        backend: Array.isArray(skills.backend) ? skills.backend.map(String) : [],
+        database: Array.isArray(skills.database) ? skills.database.map(String) : [],
+        cloud: Array.isArray(skills.cloud) ? skills.cloud.map(String) : [],
+        aiMl: Array.isArray(skills.aiMl) ? skills.aiMl.map(String) : [],
+        tools: Array.isArray(skills.tools) ? skills.tools.map(String) : [],
+      },
+      education,
+      projects,
+      certifications,
+    };
+  } catch (error) {
+    console.error('[AI Parser] AI resume parsing failed, falling back to heuristics:', error);
+    return extractResumeDataHeuristics(text);
+  }
 }

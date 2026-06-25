@@ -51,7 +51,7 @@ async function main() {
 
     try {
       const text = resume.resumeText || (await parseResumeService(resume.storedFilePath));
-      const extracted = extractResumeDataService(text);
+      const extracted = await extractResumeDataService(text);
       const newEducation = normalizeEducation(extracted.education);
       const before = normalizeEducation(resume.education);
 
