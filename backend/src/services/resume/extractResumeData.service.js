@@ -1,299 +1,307 @@
-const SECTION_SPLITTER = /\n\s*\n/g;
+const HEADING_ALIASES = {
+  skills: ['skills', 'technical skills', 'core competencies', 'technical competency', 'technologies'],
+  education: ['education', 'academic details', 'academics', 'academics & education'],
+  projects: ['projects', 'academic projects', 'personal projects', 'hands-on work', 'project experience'],
+  certifications: ['certificates', 'certifications', 'achievements', 'credentials', 'certification'],
+  experience: ['experience', 'work experience', 'professional experience', 'employment'],
+};
 
-const KNOWN_SECTION_HEADINGS = [
-  'education',
-  'academic details',
-  'academics',
-  'projects',
-  'project',
-  'experience',
-  'work experience',
-  'employment',
-  'certifications',
-  'certificates',
-  'licenses',
-  'skills',
-  'technical skills',
-  'personal details',
-  'personal information',
-];
+const SKILL_BUCKETS = {
+  programmingLanguages: ['python', 'java', 'javascript', 'typescript', 'c++', 'c', 'c#', 'go', 'rust', 'php'],
+  frontend: ['react', 'next.js', 'vue', 'angular', 'html', 'css', 'tailwind', 'redux', 'webpack'],
+  backend: ['node.js', 'express', 'fastapi', 'django', 'flask', 'spring', 'nestjs', 'rest api', 'graphql'],
+  database: ['mongodb', 'mysql', 'postgresql', 'postgres', 'redis', 'sqlite', 'oracle', 'sql'],
+  cloud: ['aws', 'azure', 'gcp', 'docker', 'kubernetes', 'terraform', 'firebase', 'vercel'],
+  aiMl: ['machine learning', 'deep learning', 'nlp', 'computer vision', 'pytorch', 'tensorflow', 'scikit-learn', 'llm'],
+  tools: ['git', 'github', 'jira', 'postman', 'linux', 'ci/cd', 'jenkins', 'figma', 'tableau', 'power bi'],
+};
 
 function normalizeText(text = '') {
-  return text.replace(/\u00a0/g, ' ').replace(/\r/g, '').trim();
+  return String(text).replace(/\u00a0/g, ' ').replace(/\r/g, '');
 }
 
-function uniqueStrings(items) {
-  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+function unique(items = []) {
+  return [...new Set(items.map((item) => String(item || '').trim()).filter(Boolean))];
 }
 
-function isNoiseLine(line = '') {
-  const value = line.trim();
-  if (!value) return true;
-  if (/^(linkedin|github|portfolio|email|phone|mobile|contact)\b/i.test(value)) return true;
-  if (/https?:\/\//i.test(value)) return true;
-  if (/^[+()\d\s-]{7,}$/.test(value)) return true;
-  if (/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(value)) return true;
-  if (/^(present|current|education|projects?|experience|certifications?|skills?)$/i.test(value)) return true;
-  return false;
+function normalizeUrl(value = '') {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text)) return text;
+  if (/^(www\.|github\.com|linkedin\.com|leetcode\.com)/i.test(text)) return `https://${text.replace(/^www\./i, '')}`;
+  return text;
 }
 
-function isHeadingLine(line = '') {
+function findHeadingIndex(lines, aliases) {
+  const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
+  return lines.findIndex((line) => {
+    const value = line.toLowerCase();
+    return normalizedAliases.some((alias) => value === alias || value.startsWith(`${alias}:`) || value.startsWith(`${alias} `));
+  });
+}
+
+function isLikelyHeading(line = '') {
   const value = line.trim().toLowerCase();
   if (!value) return false;
-  return KNOWN_SECTION_HEADINGS.some(
-    (heading) => value === heading || value.startsWith(`${heading}:`) || value.startsWith(`${heading} `)
-  );
+  if (value.length > 45) return false;
+  return Object.values(HEADING_ALIASES).flat().some((alias) => value === alias || value.startsWith(`${alias}:`));
 }
 
-export function extractEmail(text = '') {
-  const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  return match ? match[0] : '';
-}
-
-export function extractPhone(text = '') {
-  const match = text.match(/(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{4}/);
-  return match ? match[0].trim() : '';
-}
-
-export function extractSkills(text = '') {
-  const skillKeywords = [
-    'JavaScript',
-    'TypeScript',
-    'Node.js',
-    'Express',
-    'MongoDB',
-    'Mongoose',
-    'React',
-    'Next.js',
-    'HTML',
-    'CSS',
-    'Tailwind CSS',
-    'Python',
-    'Java',
-    'C++',
-    'C#',
-    'SQL',
-    'PostgreSQL',
-    'MySQL',
-    'Redis',
-    'Docker',
-    'Kubernetes',
-    'AWS',
-    'Azure',
-    'Git',
-    'REST API',
-    'GraphQL',
-    'Redux',
-    'Jest',
-    'Mocha',
-    'Chai',
-    'GitHub Actions',
-    'CI/CD',
-    'Firebase',
-    'FastAPI',
-    'Django',
-  ];
-
-  const normalizedText = text.toLowerCase();
-  return uniqueStrings(
-    skillKeywords.filter((skill) => {
-      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`\\b${escaped}\\b`, 'i');
-      return pattern.test(normalizedText);
-    })
-  );
-}
-
-function extractSectionLines(text, headings) {
-  const lines = normalizeText(text)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const headingMatches = headings.map((heading) => heading.toLowerCase());
-  const startIndex = lines.findIndex((line) =>
-    headingMatches.some((heading) => line.toLowerCase() === heading || line.toLowerCase().startsWith(`${heading}:`))
-  );
-
-  if (startIndex === -1) return [];
-
+function sectionLines(lines, aliases) {
+  const start = findHeadingIndex(lines, aliases);
+  if (start === -1) return [];
   const collected = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    if (isLikelyHeading(line) && findHeadingIndex([line], aliases) === -1) break;
+    collected.push(line);
+  }
+  return collected;
+}
 
-  for (let index = startIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    const lower = line.toLowerCase();
+function extractContact(lines, text) {
+  const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  const phoneMatch = text.match(/(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3,4}\)?[-.\s]?)\d{3,4}[-.\s]?\d{4}/);
+  const github = lines.find((line) => /github\.com/i.test(line)) || '';
+  const linkedin = lines.find((line) => /linkedin\.com/i.test(line)) || '';
+  const leetcode = lines.find((line) => /leetcode\.com/i.test(line)) || '';
+  const name = lines.find((line) => line && !/@/.test(line) && !/github\.com|linkedin\.com|leetcode\.com/i.test(line) && line.length < 80) || '';
 
-    if (isHeadingLine(line) && !headingMatches.some((heading) => lower === heading || lower.startsWith(`${heading}:`))) {
-      break;
-    }
+  return {
+    name,
+    email: emailMatch ? emailMatch[0] : '',
+    phoneNumber: phoneMatch ? phoneMatch[0].trim() : '',
+    github: normalizeUrl(github),
+    linkedin: normalizeUrl(linkedin),
+    leetcode: normalizeUrl(leetcode),
+  };
+}
 
-    const splitParts = line.split(/(?:^|\s)[•\-–]\s*/g).map((part) => part.trim()).filter(Boolean);
-    for (const part of splitParts) {
-      if (!isNoiseLine(part) && part.length >= 3 && !/^\d{1,2}\/\d{2,4}/.test(part)) {
-        collected.push(part);
-      }
+function parseSkills(text, lines) {
+  const skillSet = new Set();
+  const normalizedText = text.toLowerCase();
+  for (const bucket of Object.values(SKILL_BUCKETS)) {
+    for (const skill of bucket) {
+      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(`\\b${escaped}\\b`, 'i');
+      if (rx.test(normalizedText)) skillSet.add(skill);
     }
   }
-
-  return uniqueStrings(collected).slice(0, 10);
+  const section = sectionLines(lines, HEADING_ALIASES.skills);
+  for (const line of section) {
+    line.split(/[,|/•;-]/).map((item) => item.trim()).filter(Boolean).forEach((item) => skillSet.add(item));
+  }
+  return categorizeSkills([...skillSet]);
 }
 
-export function extractEducation(text = '') {
-  const lines = extractSectionLines(text, ['education', 'academic details', 'academics']);
+function categorizeSkills(skills) {
+  const result = {
+    programmingLanguages: [],
+    frontend: [],
+    backend: [],
+    database: [],
+    cloud: [],
+    aiMl: [],
+    tools: [],
+  };
+  for (const skill of unique(skills)) {
+    const lower = skill.toLowerCase();
+    if (SKILL_BUCKETS.programmingLanguages.some((item) => lower.includes(item))) result.programmingLanguages.push(skill);
+    else if (SKILL_BUCKETS.frontend.some((item) => lower.includes(item))) result.frontend.push(skill);
+    else if (SKILL_BUCKETS.backend.some((item) => lower.includes(item))) result.backend.push(skill);
+    else if (SKILL_BUCKETS.database.some((item) => lower.includes(item))) result.database.push(skill);
+    else if (SKILL_BUCKETS.cloud.some((item) => lower.includes(item))) result.cloud.push(skill);
+    else if (SKILL_BUCKETS.aiMl.some((item) => lower.includes(item))) result.aiMl.push(skill);
+    else result.tools.push(skill);
+  }
+  return result;
+}
+
+function parseEducation(lines) {
+  const section = sectionLines(lines, HEADING_ALIASES.education);
   const records = [];
   let current = null;
 
-  const degreeRe = /\b(?:b\.?tech\.?|m\.?tech\.?|b\.?sc\.?|m\.?sc\.?|b\.?e\.?|m\.?e\.?|bca|mca|mba|phd|bachelor[^,\n]*|master[^,\n]*)\b/i;
-  const yearRangeRe = /\b(19\d{2}|20\d{2})\s*(?:-|to|–)\s*(19\d{2}|20\d{2}|present|current)\b/i;
-  const yearRe = /\b(19\d{2}|20\d{2})\b/g;
-  const cgpaRe = /\b(?:cgpa|gpa)\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i;
-  const percentageRe = /\bpercentage\s*[:\-]?\s*(\d+(?:\.\d+)?)\b/i;
+  const pushCurrent = () => {
+    if (!current) return;
+    const normalized = normalizeEducationItem(current);
+    if (normalized.degree || normalized.institution || normalized.cgpa || normalized.startYear || normalized.endYear) {
+      records.push(normalized);
+    }
+    current = null;
+  };
 
-  for (const entry of lines) {
-    const lower = entry.toLowerCase();
-    const isDegreeLine = degreeRe.test(entry) || (!current && /in\s+[a-z]/i.test(entry));
+  for (let index = 0; index < section.length; index += 1) {
+    const line = section[index].trim();
+    if (!line || isLikelyHeading(line) || isEducationNoise(line)) continue;
 
-    if (isDegreeLine) {
-      if (current) records.push(current);
-      const degreeMatch = entry.match(degreeRe);
-      const degree = degreeMatch ? degreeMatch[0].replace(/\s+in\s+.*/i, '').trim() : entry;
-      const specializationMatch = entry.match(/\b(?:in|of|for)\s+([^,()|]+)$/i);
+    const yearLine = extractYearRange(line);
+    const scoreLine = extractScore(line);
+    const degreeLine = looksLikeEducationDegree(line);
+
+    if (!current && !degreeLine && !yearLine && !scoreLine) {
+      continue;
+    }
+
+    if (degreeLine) {
+      pushCurrent();
       current = {
-        degree,
-        specialization: specializationMatch ? specializationMatch[1].trim() : '',
+        degree: cleanEducationValue(stripDegreeNoise(line)),
         institution: '',
-        start_year: '',
-        graduation_year: '',
         cgpa: '',
-        percentage: '',
-        title: degree,
-        organization: '',
-        description: '',
-        startDate: '',
-        endDate: '',
-        location: '',
+        startYear: '',
+        endYear: '',
       };
       continue;
     }
 
     if (!current) {
       current = {
-        degree: entry,
-        specialization: '',
+        degree: '',
         institution: '',
-        start_year: '',
-        graduation_year: '',
         cgpa: '',
-        percentage: '',
-        title: entry,
-        organization: '',
-        description: '',
-        startDate: '',
-        endDate: '',
-        location: '',
+        startYear: '',
+        endYear: '',
       };
+    }
+
+    if (!current.degree && looksLikeEducationDegree(line)) {
+      current.degree = cleanEducationValue(stripDegreeNoise(line));
       continue;
     }
 
-    if (!current.institution && !yearRangeRe.test(entry) && !cgpaRe.test(entry) && !percentageRe.test(entry)) {
-      current.institution = entry;
+    if (!current.institution && !yearLine && !scoreLine && !isEducationNoise(line)) {
+      current.institution = cleanEducationValue(line);
+      continue;
     }
 
-    const rangeMatch = entry.match(yearRangeRe);
-    if (rangeMatch) {
-      current.start_year = rangeMatch[1];
-      if (!/present|current/i.test(rangeMatch[2])) {
-        current.graduation_year = rangeMatch[2];
-      }
-      current.startDate = rangeMatch[1];
-      current.endDate = /present|current/i.test(rangeMatch[2]) ? '' : rangeMatch[2];
-    } else {
-      const years = entry.match(yearRe) || [];
-      if (years.length) {
-        if (!current.start_year) current.start_year = years[0];
-        current.graduation_year = years[years.length - 1];
-        current.startDate = current.startDate || years[0];
-        current.endDate = current.endDate || years[years.length - 1];
-      }
+    if (yearLine) {
+      current.startYear = current.startYear || yearLine.start;
+      current.endYear = yearLine.end;
+      continue;
     }
 
-    const cgpaMatch = entry.match(cgpaRe);
-    if (cgpaMatch) current.cgpa = cgpaMatch[1];
-
-    const percentageMatch = entry.match(percentageRe);
-    if (percentageMatch) current.percentage = percentageMatch[1];
-
-    if (!current.specialization && /\b(?:computer science|information technology|electronics|mechanical|civil|electrical|data science|engineering)\b/i.test(entry)) {
-      current.specialization = entry;
-    } else if (current.description) {
-      current.description += ` | ${entry}`;
-    } else {
-      current.description = entry;
+    if (scoreLine) {
+      current.cgpa = scoreLine;
+      continue;
     }
   }
 
-  if (current) records.push(current);
-  return records.slice(0, 8);
+  pushCurrent();
+  const normalized = records
+    .map((item) => normalizeEducationItem(item))
+    .filter((item) => item.degree || item.institution || item.cgpa || item.startYear || item.endYear);
+  return normalized.slice(0, 6);
 }
 
-export function extractProjects(text = '') {
-  return extractSectionLines(text, ['projects', 'project']).map((entry) => ({
-    title: entry,
-    organization: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-  }));
+function isEducationNoise(line = '') {
+  const value = line.toLowerCase();
+  return [
+    'examination',
+    'institute',
+    'year',
+    'cpi',
+    'percentage',
+    'aggregate',
+    'marks',
+    'subjects',
+    'board',
+  ].some((token) => value === token || value.includes(`${token}/`) || value.includes(`${token}%`) || value.includes(`${token}:`));
 }
 
-export function extractExperience(text = '') {
-  return extractSectionLines(text, ['experience', 'work experience', 'employment']).map((entry) => ({
-    title: entry,
-    organization: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-  }));
+function looksLikeEducationDegree(line = '') {
+  return /\b(b\.?tech|m\.?tech|b\.?sc|m\.?sc|b\.?e|m\.?e|bca|mca|mba|phd|doctorate|intermediate|higher secondary|secondary|10th|12th|bachelor|master|diploma)\b/i.test(line);
 }
 
-export function extractCertifications(text = '') {
-  return extractSectionLines(text, ['certifications', 'certificates', 'licenses']);
+function stripDegreeNoise(line = '') {
+  return String(line)
+    .replace(/\b(?:graduation|education|examination|institute|year|cpi|percentage)\b.*$/i, '')
+    .split(/\s+in\s+/i)[0]
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function extractYearRange(line = '') {
+  const match = line.match(/\b(?<start>19\d{2}|20\d{2})\s*(?:-|to|–|—)\s*(?<end>19\d{2}|20\d{2}|present|current)\b/i);
+  if (!match?.groups) return null;
+  return {
+    start: match.groups.start,
+    end: /present|current/i.test(match.groups.end) ? 'Present' : match.groups.end,
+  };
+}
+
+function extractScore(line = '') {
+  const match = line.match(/\b(?:cgpa|gpa|cpi|percentage)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i);
+  if (match) return match[1];
+  const loneScore = line.match(/^\d{1,3}(?:\.\d+)?$/);
+  return loneScore ? loneScore[0] : '';
+}
+
+function extractSpecialization(line = '') {
+  const match = line.match(/\b(?:in|of|for)\s+([^,()\n]+)/i);
+  return match ? cleanEducationValue(match[1]) : '';
+}
+
+function extractInstitution(line = '') {
+  const knownStops = ['2020', '2021', '2022', '2023', '2024', 'present', 'current', 'cgpa', 'gpa', 'cpi', 'percentage'];
+  const parts = line.split(/[,|]/).map((part) => part.trim()).filter(Boolean);
+  const candidate = parts.find((part) => !knownStops.some((stop) => part.toLowerCase().includes(stop)) && part.length > 3 && !/\b(b\.?tech|m\.?tech|b\.?sc|m\.?sc|b\.?e|m\.?e|bca|mca|mba|phd|bachelor|master|diploma)\b/i.test(part));
+  return candidate ? cleanEducationValue(candidate) : '';
+}
+
+function cleanEducationValue(value = '') {
+  return String(value).replace(/\s{2,}/g, ' ').replace(/[|]+/g, ' ').trim();
+}
+
+function normalizeEducationItem(item = {}) {
+  const degree = cleanEducationValue(item.degree || '');
+  const specialization = cleanEducationValue(item.specialization || '');
+  const institution = cleanEducationValue(item.institution || '');
+  const startYear = cleanEducationValue(item.startYear || '');
+  const endYear = cleanEducationValue(item.endYear || '');
+  const cgpa = cleanEducationValue(item.cgpa || '');
+  return { degree, specialization, institution, startYear, endYear, cgpa };
+}
+
+function parseProjects(lines) {
+  const section = sectionLines(lines, HEADING_ALIASES.projects);
+  const projects = [];
+  let current = null;
+  for (const line of section) {
+    if (isLikelyHeading(line)) break;
+    const titleLike = !/^[•\-*]\s*/.test(line) && line.length < 120;
+    if (titleLike || !current) {
+      if (current) projects.push(current);
+      current = { title: line, summary: '', technologies: [], achievements: [], complexity: '' };
+      continue;
+    }
+    const clean = line.replace(/^[•\-*]\s*/, '').trim();
+    if (/technology|stack|built with|using/i.test(clean)) {
+      current.technologies = unique([...current.technologies, ...clean.split(/[,|/]/).map((item) => item.trim())]);
+    } else if (clean) {
+      current.achievements.push(clean);
+      current.summary = current.summary ? `${current.summary} ${clean}` : clean;
+    }
+  }
+  if (current) projects.push(current);
+  return projects.slice(0, 8);
+}
+
+function parseCertifications(lines) {
+  const section = sectionLines(lines, HEADING_ALIASES.certifications);
+  return unique(section.map((line) => line.replace(/^[•\-*]\s*/, '').trim()).filter(Boolean)).slice(0, 12);
 }
 
 export function extractResumeDataService(text = '') {
   const normalizedText = normalizeText(text);
-  const lines = normalizedText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const nameLine = lines.find((line) => {
-    if (isNoiseLine(line)) return false;
-    if (isHeadingLine(line)) return false;
-    if (line.length > 70) return false;
-    return /[a-zA-Z]/.test(line);
-  });
-
-  const personalInfo = {
-    name: nameLine || '',
-    email: extractEmail(normalizedText),
-    phone: extractPhone(normalizedText),
-    location: '',
-  };
-
-  const locationLine = lines.find((line) => /(?:location|address|city|state)/i.test(line));
-  if (locationLine) {
-    personalInfo.location = locationLine.replace(/^(location|address)\s*:\s*/i, '').trim();
-  }
-
+  const lines = normalizedText.split('\n').map((line) => line.trim()).filter(Boolean);
+  const personalInfo = extractContact(lines, normalizedText);
   return {
     personalInfo,
-    skills: extractSkills(normalizedText),
-    education: extractEducation(normalizedText),
-    projects: extractProjects(normalizedText),
-    experience: extractExperience(normalizedText),
-    certifications: extractCertifications(normalizedText),
+    skills: parseSkills(normalizedText, lines),
+    education: parseEducation(lines),
+    projects: parseProjects(lines),
+    certifications: parseCertifications(lines),
   };
 }

@@ -1,417 +1,366 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import Card from '../../components/common/Card';
-import Loader from '../../components/common/Loader';
-import SectionHeading from '../../components/common/SectionHeading';
 import SkillChip from '../../components/common/SkillChip';
-import ReadinessScoreCard from '../../components/dashboard/ReadinessScoreCard';
-import AtsScoreCard from '../../components/dashboard/AtsScoreCard';
-import KeyStrengthsCard from '../../components/dashboard/KeyStrengthsCard';
-import MissingSkillsCard from '../../components/dashboard/MissingSkillsCard';
-import { analysisService } from '../../services/analysisService';
 import useAuth from '../../hooks/useAuth';
+import { dashboardService } from '../../services/dashboardService';
+import { resumeService } from '../../services/resumeService';
+import {
+  ScoreCard,
+  BulletCard,
+  ProjectInsightCard,
+} from '../../components/dashboard/Widgets';
 
-function SkeletonBlock() {
-  return <div className="h-4 animate-pulse rounded bg-slate-200/80" />;
-}
+const CARD_KEYS = {
+  readiness: 'readiness',
+  ats: 'ats',
+  strengths: 'strengths',
+  weaknesses: 'weaknesses',
+  missing: 'missing',
+  techLearn: 'techLearn',
+  projects: 'projects',
+  certifications: 'certifications',
+  recommendations: 'recommendations',
+  roadmap: 'roadmap',
+};
 
 export default function DashboardPage() {
-  const [analysis, setAnalysis] = useState(null);
+  const { user } = useAuth();
+  const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const location = useLocation();
-  const { user } = useAuth();
 
   useEffect(() => {
     let active = true;
-
-    const loadDashboard = async () => {
+    (async () => {
       try {
         setLoading(true);
-        const response = await analysisService.getBackendDashboardSnapshot(user?._id || user?.id);
+        const userId = user?._id || user?.id;
+        const [dashboardResponse, resumeResponse] = await Promise.allSettled([
+          userId ? dashboardService.getDashboard(userId) : Promise.resolve(null),
+          resumeService.getLatestResume(),
+        ]);
         if (!active) return;
-        if (!response) {
-          setAnalysis(null);
-          setError('No analysis has been saved yet. Run a new resume analysis.');
-          return;
-        }
-        setAnalysis(normalizeDashboardPayload(response));
+        const dashboardData = dashboardResponse.status === 'fulfilled' ? dashboardResponse.value?.data || dashboardResponse.value : null;
+        const latestResume = resumeResponse.status === 'fulfilled' ? resumeResponse.value?.data?.resume || resumeResponse.value?.resume || null : null;
+        setPayload(mergePayload(dashboardData, latestResume));
         setError('');
       } catch (err) {
-        if (!active) return;
-        setError(typeof err === 'string' ? err : 'Unable to load dashboard data.');
+        if (active) setError(typeof err === 'string' ? err : 'Unable to fetch dashboard data.');
       } finally {
         if (active) setLoading(false);
       }
-    };
-
-    loadDashboard();
+    })();
     return () => {
       active = false;
     };
-  }, [location.key]);
+  }, [user?._id, user?.id]);
 
-  const sections = useMemo(() => analysis || {}, [analysis]);
-  const skills = sections.skills?.detected_skills || sections.skills || [];
-  const resumeImprove = sections.resume_improvement_suggestions || [];
-  const roadmap = sections.learning_roadmap || [];
-  const contextPreview = sections.context_preview || [];
-  const ragSummary = sections.rag_summary || {};
+  const analysis = payload?.analysis || payload || {};
+  const resume = payload?.resume || {};
+  const normalizedResume = normalizeResume(resume);
+  const readiness = analysis.readinessScore || 0;
+  const ats = analysis.ats_analysis?.ats_score || 0;
+  const strengths = normalizeList(analysis.strengths || []);
+  const weaknesses = normalizeList(analysis.weaknesses || []);
+  const missingSkills = normalizeList(analysis.skillGaps || []);
+  const technologiesToLearn = normalizeList(analysis.technologiesToLearn || analysis.technologies_to_learn || analysis.recommendations?.technologiesToLearn || []);
+  const suggestions = normalizeList(analysis.resumeImprovementSuggestions || analysis.resume_improvement_suggestions || analysis.recommendations?.resumeSuggestions || []);
+  const suggestedProjects = normalizeProjectList(analysis.recommendations?.suggestedProjects || analysis.suggestedProjects || []);
+  const resumeProjects = normalizeProjectList(normalizeProjectBuckets(analysis.projectInsights || analysis.projectInsightsBySource || {}, resume.projects || []).resumeDerived);
+  const ragProjects = normalizeProjectList(normalizeProjectBuckets(analysis.projectInsights || analysis.projectInsightsBySource || {}, resume.projects || []).ragEnriched);
+  const projects = [...resumeProjects, ...ragProjects].slice(0, 8);
+  const certifications = normalizeCertifications(analysis.certificationInsights || resume.certifications || []);
+  const roadmap = analysis.roadmap || [];
+
+  const cards = useMemo(() => ([
+    renderReadinessCard({ readiness, resume: normalizedResume, loading, error }),
+    renderAtsCard({ ats, loading, error }),
+    renderListCard({ title: 'Strengths', items: strengths, loading, error, cardKey: CARD_KEYS.strengths }),
+    renderListCard({ title: 'Weaknesses', items: weaknesses, loading, error, cardKey: CARD_KEYS.weaknesses }),
+    renderMissingSkillsCard({ missingSkills, loading, error }),
+    renderTechLearnCard({ technologiesToLearn, loading, error }),
+    renderProjectsCard({ projects, loading, error }),
+    renderCertificationsCard({ certifications, loading, error }),
+    renderRecommendationsCard({ technologiesToLearn, suggestions, suggestedProjects, loading, error }),
+    renderRoadmapCard({ roadmap, loading, error }),
+  ]), [readiness, ats, strengths, weaknesses, missingSkills, technologiesToLearn, projects, certifications, suggestions, suggestedProjects, roadmap, normalizedResume, loading, error]);
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 py-12 lg:grid-cols-[240px_1fr]">
+    <div className="mx-auto grid max-w-7xl gap-5 px-4 py-10 lg:grid-cols-[220px_1fr]">
       <Sidebar />
-      <div className="grid gap-6">
-        {error ? (
-          <Card className="border-rose-200 bg-rose-50 text-rose-700">
-            {error}
-          </Card>
-        ) : null}
+      <div className="grid gap-5">
+        {error ? <Card className="border-rose-200 bg-rose-50 text-rose-700">{error}</Card> : null}
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {loading ? (
-            <>
-              <Card className="p-5"><SkeletonBlock /></Card>
-              <Card className="p-5"><SkeletonBlock /></Card>
-              <Card className="p-5"><SkeletonBlock /></Card>
-            </>
-          ) : (
-            <>
-              <ReadinessScoreCard readiness={sections.readiness_score || {}} />
-              <AtsScoreCard ats={sections.ats_analysis || {}} />
-              <KeyStrengthsCard strengths={sections.key_strengths || []} />
-            </>
-          )}
+        <div className="grid gap-5 xl:grid-cols-2">
+          {cards.slice(0, 2)}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="p-6">
-            <SectionHeading title="Weaknesses" subtitle="Areas that need attention" />
-            <div className="mt-4 space-y-2">
-              {(sections.recruiter_summary?.concerns || []).length ? (
-                sections.recruiter_summary.concerns.map((item) => (
-                  <div key={item} className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {item}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">No major weaknesses flagged yet.</p>
-              )}
-            </div>
-          </Card>
-
-          <MissingSkillsCard skillGap={sections.skill_gap_analysis || {}} />
+        <div className="grid gap-5 xl:grid-cols-2">
+          {cards.slice(2, 4)}
         </div>
 
-        <Card className="p-6">
-          <SectionHeading
-            title="Resume Analysis"
-            subtitle="Structured extraction from the uploaded PDF"
-          />
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              <SkeletonBlock />
-              <SkeletonBlock />
-            </div>
-          ) : analysis ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Personal Information</div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoField label="Name" value={sections.personal_information?.name} />
-                  <InfoField label="Email" value={sections.personal_information?.email} />
-                  <InfoField label="Phone" value={sections.personal_information?.phone} />
-                  <InfoField label="Location" value={sections.personal_information?.location} />
-                  <InfoField label="GitHub" value={sections.personal_information?.github} />
-                  <InfoField label="LinkedIn" value={sections.personal_information?.linkedin} />
-                  <InfoField label="Portfolio" value={sections.personal_information?.portfolio} />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Skills</div>
-                <div className="flex flex-wrap gap-2">
-                  {skills.length ? skills.map((item) => <SkillChip key={item}>{item}</SkillChip>) : <span className="text-sm text-slate-500">None</span>}
-                </div>
-              </div>
-              <AnalysisListSection
-                title="RAG Context"
-                items={contextPreview}
-                renderItem={(item) => (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-semibold text-slate-900">{item.title || 'Resource'}</div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        {item.type || 'match'}
-                        {item.score ? ` • ${item.score}%` : ''}
-                      </div>
-                    </div>
-                    <div className="mt-2 text-sm text-slate-600">
-                      {item.description || 'Matched from your resume profile.'}
-                    </div>
-                  </div>
-                )}
-              />
-              <AnalysisListSection title="Education" items={sections.education || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{item.degree || 'Education'}</div>
-                  <div className="text-sm text-slate-600">{item.specialization || 'Specialization not available'}</div>
-                  <div className="text-sm text-slate-600">{item.institution || 'Institution not available'}</div>
-                  <div className="text-xs text-slate-500">{[item.start_year, item.graduation_year, item.cgpa, item.percentage].filter(Boolean).join(' • ') || 'No academic details available'}</div>
-                </div>
-              )} />
-              <AnalysisListSection title="Projects" items={sections.projects || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{item.title || 'Project'}</div>
-                  <div className="mt-1 text-sm text-slate-600">{item.description || 'No description available'}</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(item.technologies || []).map((tech) => <SkillChip key={tech} tone="primary">{tech}</SkillChip>)}
-                  </div>
-                  <div className="mt-2 text-xs text-slate-500">{item.complexity ? `Complexity: ${item.complexity}` : ''} {item.project_score != null ? `Score: ${item.project_score}` : ''}</div>
-                </div>
-              )} />
-              <AnalysisListSection title="Experience" items={sections.experience || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{item.company || 'Company'}</div>
-                  <div className="text-sm text-slate-600">{item.role || 'Role not available'}</div>
-                  <div className="text-xs text-slate-500">{item.duration || 'Duration not available'}</div>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
-                    {(item.responsibilities || []).map((resp) => <li key={resp}>{resp}</li>)}
-                  </ul>
-                </div>
-              )} />
-              <AnalysisListSection title="Certifications" items={sections.certifications || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{typeof item === 'string' ? item : item.title || item.name || 'Certification'}</div>
-                </div>
-              )} />
-            </div>
-          ) : (
-            <p className="text-sm text-slate-600">Run an analysis to populate the dashboard.</p>
-          )}
-        </Card>
-
-        <Card className="p-6">
-          <SectionHeading title="Resume Preview" subtitle="Structured sections extracted from the uploaded PDF" />
-          {sections.resume_text ? (
-            <details className="group rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-700">Show extracted text</summary>
-              <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap text-xs leading-6 text-slate-600">
-                {sections.resume_text}
-              </pre>
-            </details>
-          ) : (
-            <p className="text-sm text-slate-600">The structured sections above are taken from your uploaded resume.</p>
-          )}
-        </Card>
-
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="p-6">
-            <SectionHeading title="Career Insights" subtitle="Domain alignment and learning signals" />
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Primary Domain" value={sections.career_insights?.primary_domain} />
-              <Field label="Secondary Domains" value={(sections.career_insights?.secondary_domains || []).join(', ')} />
-              <Field label="Domain Match" value={`${sections.career_insights?.domain_match_percentage ?? 0}%`} />
-              <Field label="Confidence" value={`${sections.career_insights?.confidence_score ?? 0}%`} />
-            </div>
-            {ragSummary.summary_bullets?.length ? (
-              <div className="mt-6 space-y-2">
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">RAG Summary</div>
-                {ragSummary.summary_bullets.map((bullet) => (
-                  <div key={bullet} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                    {bullet}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </Card>
-
-          <Card className="p-6">
-            <SectionHeading title="Recruiter Summary" subtitle="Shortlist-ready view" />
-            <div className="space-y-3">
-              <Field label="Strengths" value={(sections.recruiter_summary?.strengths || []).join(' • ')} />
-              <Field label="Concerns" value={(sections.recruiter_summary?.concerns || []).join(' • ')} />
-              <Field label="Feedback" value={sections.recruiter_summary?.overall_feedback} />
-              <Field label="Hire Recommendation" value={sections.recruiter_summary?.hire_recommendation} />
-            </div>
-          </Card>
+        <div className="grid gap-5 xl:grid-cols-2">
+          {cards.slice(4, 6)}
         </div>
 
-        <Card className="p-6">
-          <SectionHeading title="Recommendations" subtitle="Learning roadmap and suggested actions" />
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Technologies to Learn</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(sections.technologies_to_learn || []).length
-                    ? sections.technologies_to_learn.map((item) => <SkillChip key={item} tone="primary">{item}</SkillChip>)
-                    : <span className="text-sm text-slate-500">None</span>}
-                </div>
-              </div>
-              <AnalysisListSection title="Learning Roadmap" items={roadmap} renderItem={(item) => (
-                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700">{item.step}</div>
-                  <div>
-                    <div className="font-semibold text-slate-900">{item.technology || 'Technology'}</div>
-                    <div className="text-sm text-slate-500">{item.reason || 'No reason provided.'}</div>
-                  </div>
-                </div>
-              )} />
-              <AnalysisListSection title="Resume Improvement Suggestions" items={resumeImprove} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">{item}</div>
-              )} />
-            </div>
+        <div className="grid gap-5">
+          {cards.slice(6, 7)}
+        </div>
 
-            <div className="space-y-4">
-              <AnalysisListSection title="Recommended Courses" items={sections.recommended_courses || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{item.title || item.course_name || 'Course'}</div>
-                  <div className="text-sm text-slate-600">{item.provider || item.description || 'Recommended learning resource'}</div>
-                  <div className="mt-2 text-xs text-slate-500">{item.reason || ''}</div>
-                </div>
-              )} />
-              <AnalysisListSection title="Suggested Projects" items={sections.suggested_projects || []} renderItem={(item) => (
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="font-semibold text-slate-900">{item.title || item.project_name || 'Project'}</div>
-                  <div className="text-sm text-slate-600">{item.difficulty || 'Project idea'}</div>
-                  <div className="mt-2 text-xs text-slate-500">{item.reason || ''}</div>
-                </div>
-              )} />
+        <div className="grid gap-5">
+          {cards.slice(7, 8)}
+        </div>
+
+        <div className="grid gap-5">
+          {cards.slice(8, 9)}
+        </div>
+
+        <div className="grid gap-5">
+          {cards.slice(9)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderReadinessCard({ readiness, resume, loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.readiness} title="Readiness Score" metricCount={2} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.readiness} title="Readiness Score" error={error} />;
+  return (
+    <ScoreCard
+      key={CARD_KEYS.readiness}
+      title="Readiness Score"
+      score={readiness}
+      subtitle="ML model output"
+      metrics={[
+        { label: 'Skills', value: countFlatSkills(resume.skills) },
+      ]}
+    />
+  );
+}
+
+function renderAtsCard({ ats, loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.ats} title="ATS Score" metricCount={2} tone="warning" />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.ats} title="ATS Score" error={error} />;
+  return <ScoreCard key={CARD_KEYS.ats} title="ATS Score" score={ats} subtitle="Resume formatting and keyword fit" tone="warning" metrics={[]} />;
+}
+
+function renderListCard({ title, items = [], loading, error, cardKey }) {
+  if (loading) return <DashboardSkeleton key={cardKey} title={title} metricCount={2} />;
+  if (error) return <DashboardErrorCard key={cardKey} title={title} error={error} />;
+  return <BulletCard key={cardKey} title={title} items={items} compact />;
+}
+
+function renderMissingSkillsCard({ missingSkills = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.missing} title="Missing Skills" metricCount={1} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.missing} title="Missing Skills" error={error} />;
+  return (
+    <Card className="h-auto p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Missing Skills</div>
+        <div className="text-sm text-slate-500">{missingSkills.length}</div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {missingSkills.map((skill) => <SkillChip key={skill} tone="warning">{skill}</SkillChip>)}
+      </div>
+    </Card>
+  );
+}
+
+function renderTechLearnCard({ technologiesToLearn = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.techLearn} title="Technologies To Learn" metricCount={2} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.techLearn} title="Technologies To Learn" error={error} />;
+  return (
+    <Card className="h-auto p-6">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Technologies To Learn</div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {technologiesToLearn.map((tech) => <SkillChip key={tech}>{tech}</SkillChip>)}
+      </div>
+    </Card>
+  );
+}
+
+function renderProjectsCard({ projects = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.projects} title="Projects" metricCount={4} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.projects} title="Projects" error={error} />;
+  return (
+    <Card className="h-auto p-4">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Projects</div>
+      <div className="mt-3 grid gap-3 md:grid-cols-1 xl:grid-cols-2">
+        {projects.map((project) => <ProjectInsightCard key={`${project.sourceLabel}-${project.title}`} project={project} />)}
+      </div>
+    </Card>
+  );
+}
+
+function renderCertificationsCard({ certifications = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.certifications} title="Certifications" metricCount={4} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.certifications} title="Certifications" error={error} />;
+  return (
+    <Card className="h-auto p-4">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Certifications</div>
+      <div className="mt-3 grid gap-2">
+        {certifications.map((cert) => (
+          <div key={cert.name} className="grid gap-1 rounded-xl bg-slate-50 px-3 py-2 md:grid-cols-[1.5fr_1fr_0.6fr_1.2fr] md:items-center">
+            <div className="font-semibold text-slate-900">{cert.name}</div>
+            <div className="text-sm text-slate-600">{cert.issuer}</div>
+            <div className="text-sm text-slate-500">{cert.year}</div>
+            <div className="text-sm text-slate-600">{cert.relevance}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function renderRecommendationsCard({ technologiesToLearn = [], suggestions = [], suggestedProjects = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.recommendations} title="Recommendations" metricCount={3} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.recommendations} title="Recommendations" error={error} />;
+  return (
+    <Card className="h-auto p-4">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Recommendations</div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        <RecommendationBlock title="Technologies to Learn" items={technologiesToLearn} />
+        <RecommendationBlock title="Resume Improvements" items={suggestions} />
+        <RecommendationBlock title="Suggested Projects" items={suggestedProjects.map((item) => item.title || item)} />
+      </div>
+    </Card>
+  );
+}
+
+function RecommendationBlock({ title, items = [] }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-3">
+      <div className="text-sm font-semibold text-slate-900">{title}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {items.map((item) => <SkillChip key={`${title}-${item}`}>{item}</SkillChip>)}
+      </div>
+    </div>
+  );
+}
+
+function renderRoadmapCard({ roadmap = [], loading, error }) {
+  if (loading) return <DashboardSkeleton key={CARD_KEYS.roadmap} title="Roadmap" metricCount={3} />;
+  if (error) return <DashboardErrorCard key={CARD_KEYS.roadmap} title="Roadmap" error={error} />;
+  return (
+    <Card className="h-auto p-4">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Roadmap</div>
+      <div className="mt-3 space-y-2">
+        {roadmap.map((item) => (
+          <div key={item.level} className="rounded-xl bg-slate-50 p-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="font-semibold text-slate-900">{item.level}</div>
+              <div className="text-sm text-slate-500">{item.month}</div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(item.items || []).map((entry) => <SkillChip key={`${item.level}-${entry}`}>{entry}</SkillChip>)}
             </div>
           </div>
-        </Card>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
-        <Card className="p-6">
-          <SectionHeading title="Internship Recommendations" subtitle="Role matches based on your profile" />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {(sections.internship_recommendations || []).length ? sections.internship_recommendations.map((item, index) => (
-              <div key={`${item.role || 'role'}-${index}`} className="rounded-2xl border border-slate-200 p-4">
-                <div className="font-semibold text-slate-900">{item.company || item.role || 'Internship'}</div>
-                <div className="text-sm text-slate-600">{item.role || 'Role not available'}</div>
-                <div className="mt-2 h-2 rounded-full bg-slate-100">
-                  <div className="h-2 rounded-full bg-[color:var(--color-primary)]" style={{ width: `${item.match_score ?? 0}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-slate-500">{item.match_score ?? 0}% match</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(item.required_skills_missing || []).map((skill) => <SkillChip key={skill} tone="warning">{skill}</SkillChip>)}
-                </div>
-              </div>
-            )) : <p className="text-sm text-slate-500">No internship recommendations yet.</p>}
+function DashboardSkeleton({ title, metricCount = 3, tone = 'primary' }) {
+  return (
+    <Card className="h-auto p-4">
+      <div className="animate-pulse">
+        <div className="h-3 w-32 rounded bg-slate-200" />
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-10 w-20 rounded bg-slate-200" />
+            <div className="h-4 w-40 rounded bg-slate-200" />
           </div>
-        </Card>
+          <div className={`h-20 w-20 rounded-full ${tone === 'warning' ? 'bg-amber-100' : 'bg-slate-100'}`} />
+        </div>
+        <div className="mt-4 grid gap-2">
+          {Array.from({ length: metricCount }).map((_, index) => (
+            <div key={index} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+              <div className="h-3 w-24 rounded bg-slate-200" />
+              <div className="h-3 w-12 rounded bg-slate-200" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 text-sm text-slate-400">{title} loading...</div>
       </div>
-    </div>
+    </Card>
   );
 }
 
-function AnalysisListSection({ title, items = [], renderItem }) {
+function DashboardErrorCard({ title, error }) {
   return (
-    <div>
-      <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</div>
-      <div className="mt-3 grid gap-3">
-        {items.length ? items.map((item, index) => <div key={index}>{renderItem(item, index)}</div>) : <p className="text-sm text-slate-500">No data available.</p>}
-      </div>
-    </div>
+    <Card className="h-auto border-rose-200 bg-rose-50 p-4 text-rose-700">
+      <div className="text-xs font-bold uppercase tracking-[0.24em] text-rose-400">{title}</div>
+      <div className="mt-2 text-sm">{error || 'Unable to load this section.'}</div>
+    </Card>
   );
 }
 
-function Field({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 p-4">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="mt-2 text-sm text-slate-700">{value || 'Not available'}</div>
-    </div>
-  );
+function normalizeList(items = []) {
+  return [...new Set(items.map((item) => (typeof item === 'string' ? item.trim() : item)).filter(Boolean))];
 }
 
-function InfoField({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className="mt-2 break-words text-sm font-medium text-slate-800">
-        {value || 'Not available'}
-      </div>
-    </div>
-  );
-}
-
-function normalizeDashboardPayload(payload = {}) {
-  const data = payload?.data || payload || {};
-  const analysis = data.analysis || {};
-  const resume = data.resume || {};
-
-  const education = (resume.education || []).map((item) => ({
-    degree: item.degree || item.title || 'Education',
-    specialization: item.specialization || '',
-    institution: item.institution || item.organization || '',
-    start_year: item.start_year || item.startDate || '',
-    graduation_year: item.graduation_year || item.year || '',
-    cgpa: item.cgpa || item.score || '',
-    percentage: item.percentage || '',
-  }));
-
-  const projects = (resume.projects || []).map((item) => ({
-    title: item.title || 'Project',
-    description: item.description || '',
-    technologies: Array.isArray(item.technologies) ? item.technologies : [],
-  }));
-
-  const experience = (resume.experience || []).map((item) => ({
-    company: item.company || item.organization || '',
-    role: item.role || item.title || 'Role',
-    duration: item.duration || `${item.startDate || ''}${item.endDate ? ` - ${item.endDate}` : ''}`.trim(),
-    responsibilities: Array.isArray(item.responsibilities)
-      ? item.responsibilities
-      : item.description
-        ? String(item.description).split(' | ').filter(Boolean)
-        : [],
-  }));
-
+function normalizeProjectBuckets(projectInsights = {}, fallbackProjects = []) {
+  if (Array.isArray(projectInsights)) {
+    return { resumeDerived: normalizeProjectList(projectInsights), ragEnriched: [], geminiNarrative: [] };
+  }
   return {
-    selectedRole: analysis.selectedRole || '',
-    readiness_score: {
-      overall: analysis.readinessScore ?? 0,
-      skills_score: analysis.readinessScore ?? 0,
-      projects_score: analysis.readinessScore ?? 0,
-      experience_score: 0,
-      certification_score: 0,
-    },
-    ats_analysis: analysis.ats_analysis || {},
-    key_strengths: uniqueList(analysis.strengths || []),
-    weaknesses: analysis.weaknesses || [],
-    skill_gap_analysis: {
-      missing_skills: uniqueList(analysis.skillGaps || []),
-      important_missing_skills: [],
-    },
-    personal_information: resume.personalInfo || {},
-    skills: { detected_skills: resume.skills || [] },
-    projects,
-    education,
-    experience,
-    certifications: resume.certifications || [],
-    career_insights: analysis.career_insights || {},
-    recruiter_summary: analysis.recruiter_summary || {},
-    technologies_to_learn: analysis.technologiesToLearn || analysis.technologies_to_learn || analysis.skillGaps || [],
-    recommended_courses: analysis.recommendedCourses || analysis.recommended_courses || [],
-    suggested_projects: analysis.suggestedProjects || analysis.suggested_projects || [],
-    internship_recommendations: analysis.internshipRecommendations || analysis.internship_recommendations || [],
-    learning_roadmap: buildRoadmapSteps(analysis.technologiesToLearn || analysis.skillGaps || []),
-    rag_summary: analysis.rag_summary || analysis.career_insights?.rag_summary || {},
-    context_preview: analysis.context_preview || analysis.career_insights?.context_preview || [],
-    resume_improvement_suggestions: analysis.resume_improvement_suggestions || [],
-    resume_text: resume.resumeText || '',
+    resumeDerived: normalizeProjectList(projectInsights.resumeDerived || fallbackProjects || []),
+    ragEnriched: normalizeProjectList(projectInsights.ragEnriched || []),
+    geminiNarrative: normalizeProjectList(projectInsights.geminiNarrative || []),
   };
 }
 
-function buildRoadmapSteps(items = []) {
-  return (items || []).slice(0, 5).map((technology, index) => ({
-    step: index + 1,
-    technology,
-    reason: `Learn ${technology}`,
+function normalizeProjectList(projects = []) {
+  return (Array.isArray(projects) ? projects : []).map((project) => ({
+    title: project.title || project.name || 'Project',
+    summary: project.summary || project.description || '',
+    technologies: normalizeList(project.technologies || project.techStack || project.skills || []),
+    achievements: normalizeList(project.achievements || project.metrics || project.results || []),
+    complexity: project.complexity || project.technicalComplexity || '',
+    duration: project.duration || project.timeline || project.period || '',
+    sourceLabel: project.sourceLabel || project.source || '',
   }));
 }
 
-function uniqueList(items = []) {
-  return [...new Set((items || []).map((item) => (typeof item === 'string' ? item.trim() : item)).filter(Boolean))];
+function normalizeCertifications(certifications = []) {
+  return (Array.isArray(certifications) ? certifications : []).map((cert) => {
+    if (typeof cert === 'string') {
+      return { name: cert, issuer: '', year: '', relevance: '' };
+    }
+    return {
+      name: cert.name || cert.title || '',
+      issuer: cert.issuer || cert.organization || '',
+      year: cert.year || cert.date || '',
+      relevance: cert.relevance || cert.industryRelevance || '',
+    };
+  }).filter((cert) => cert.name);
+}
+
+function countFlatSkills(skills = {}) {
+  if (Array.isArray(skills)) return skills.length;
+  return Object.values(skills || {}).reduce((count, value) => count + (Array.isArray(value) ? value.length : 0), 0);
+}
+
+function mergePayload(dashboardData, latestResume) {
+  const analysis = dashboardData?.analysis || dashboardData || {};
+  const resume = normalizeResume(dashboardData?.resume || latestResume || {});
+  return { analysis, resume };
+}
+
+function normalizeResume(resume = {}) {
+  const personalInfo = resume.personalInfo || resume.personal_information || {};
+  return {
+    ...resume,
+    personalInfo: {
+      ...personalInfo,
+      phoneNumber: personalInfo.phoneNumber || personalInfo.phone || '',
+    },
+    skills: resume.skills || {},
+    education: Array.isArray(resume.education) ? resume.education : [],
+    projects: Array.isArray(resume.projects) ? resume.projects : [],
+    certifications: Array.isArray(resume.certifications) ? resume.certifications : [],
+  };
 }

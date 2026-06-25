@@ -15,6 +15,7 @@ const env = {
   smtpPass: process.env.SMTP_PASS || '',
   aiProvider: process.env.AI_PROVIDER || 'mock',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   fastapiBaseUrl: process.env.FASTAPI_BASE_URL || '',
 };

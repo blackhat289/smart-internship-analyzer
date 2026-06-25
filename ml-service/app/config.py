@@ -13,6 +13,14 @@ class Settings(BaseModel):
     app_version: str = "2.0.0"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3"
+    ollama_timeout_seconds: int = 120
+    ollama_max_retries: int = 2
+    ollama_retry_backoff_seconds: float = 1.0
+    # LLM provider selection: 'ollama' or 'gemini'
+    llm_provider: str = "ollama"
+    # Gemini (Google) settings
+    gemini_api_key: str | None = None
+    gemini_model: str | None = None
     embedding_model: str = "all-MiniLM-L6-v2"
     base_dir: str = str(Path(__file__).resolve().parents[1])
     knowledge_base_path: str = str(Path(__file__).resolve().parents[1] / "knowledge_base")

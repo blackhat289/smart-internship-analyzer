@@ -211,9 +211,29 @@ async def recommend(payload: dict = Body(default_factory=dict)) -> Recommendatio
     context_docs = retrieve_context_for_candidate(primary_domain, resume.skills, analysis.skill_gaps)
     rag_summary = summarize_context_docs(context_docs, analysis=analysis)
     prompt = build_recommendation_prompt(analysis, context_docs)
-    client = OllamaClient(settings.ollama_base_url, settings.ollama_model)
-    try:
-        generated = await client.generate(prompt)
+    # Initialize LLM client based on configured provider
+    generated: str = ""
+    if settings.llm_provider and settings.llm_provider.lower() == "gemini":
+        from app.services.gemini_client import GeminiClient
+
+        if not settings.gemini_api_key:
+            logger.error("Gemini selected but `gemini_api_key` not configured in settings")
+        else:
+            client = GeminiClient(settings.gemini_api_key, model=settings.gemini_model, timeout_seconds=settings.ollama_timeout_seconds)
+            try:
+                generated = await client.generate(prompt)
+            except Exception:
+                logger.exception("Gemini generation failed")
+    else:
+        client = OllamaClient(
+            settings.ollama_base_url,
+            settings.ollama_model,
+            timeout_seconds=settings.ollama_timeout_seconds,
+            max_retries=settings.ollama_max_retries,
+            backoff_seconds=settings.ollama_retry_backoff_seconds,
+        )
+        try:
+            generated = await client.generate(prompt)
         if generated.strip():
             projects = [doc for doc in context_docs if doc.get("type") == "projects"][:5]
             return RecommendationResponse(

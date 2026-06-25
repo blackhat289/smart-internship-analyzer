@@ -89,7 +89,13 @@ def _extract_section_items(lines: list[str], section: str) -> list[EducationItem
         if is_new_entry:
             if current_item:
                 items.append(current_item)
-            current_item = EducationItem(degree=line, specialization="", institution="", start_year="", graduation_year="", cgpa="", percentage="")
+            degree_match = re.search(r"^(b\.?tech\.?|m\.?tech\.?|b\.?sc\.?|m\.?sc\.?|b\.?e\.?|m\.?e\.?|bca|mca|mba|phd|doctorate|bachelor[^,\n]*|master[^,\n]*|diploma[^,\n]*)", line, re.IGNORECASE)
+            degree = degree_match.group(1).strip() if degree_match else line.strip()
+            specialization = ""
+            specialization_match = re.search(r"\b(?:in|of|for)\s+([^,()\n]+)", line, re.IGNORECASE)
+            if specialization_match:
+                specialization = specialization_match.group(1).strip()
+            current_item = EducationItem(degree=degree, specialization=specialization, institution="", start_year="", graduation_year="", cgpa="", percentage="")
         else:
             if not current_item.institution:
                 years = year_re.findall(line)

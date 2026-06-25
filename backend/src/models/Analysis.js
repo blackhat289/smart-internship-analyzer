@@ -55,6 +55,22 @@ const analysisSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    projectInsights: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    projectInsightsBySource: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    certificationInsights: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+    roadmap: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
     resume_improvement_suggestions: {
       type: [String],
       default: [],
